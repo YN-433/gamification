@@ -1,17 +1,32 @@
 {
   "name": "ゲーミフィケーション",
-  "short_name": "ゲーム人生",
+  "short_name": "ゲーミフィケーション",
   "description": "毎日の行動をクエストにして、自分の人生を活動的にするアプリ",
   "lang": "ja",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#E9EFED",
-  "theme_color": "#0B8A5E",
+  "background_color": "#FFFFFF",
+  "theme_color": "#8B1A1A",
   "icons": [
-    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
