@@ -24,6 +24,7 @@ document.addEventListener('click', e => {
     state.goals.week.start = ws0; state.goals.week.end = addDays(ws0, 6); ui.wk = ws0; ui.calJump = true; ui.calPos = {};
     save(); render(); toast('1週間の始まりを' + WD[v] + '曜にしました'); return;
   }
+  if (a === 'gsignout') { if (window.GAUTH) GAUTH.signOut(); render(); toast('Googleとの接続を解除しました'); return; }
   if (a === 'bkexport') { backupExport(); return; }
   if (a === 'bkimport') { const f = document.getElementById('bkfile'); if (f) { f.value = ''; f.click(); } return; }
   if (a === 'bkcancel') { ui.bkArm = null; render(); return; }

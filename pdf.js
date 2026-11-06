@@ -136,6 +136,7 @@ function blobToB64(b) {
   return new Promise((ok, ng) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1]); r.onerror = () => ng(r.error); r.readAsDataURL(b); });
 }
 async function driveSave(gk, blob, name) {
+  if (window.IS_PWA) throw { code: 'no_mcp', message: 'Googleドライブへの保存は、この版ではまだ使えません。PDFは端末に保存してください。' };
   const mcp = await window.claude.use('mcp');
   if (!mcp) throw { code: 'no_mcp', message: 'Google Driveにつなげませんでした。Claudeのアプリで開いているか確認してください。' };
   const folder = gk === 'week' ? WEEK_FOLDER : gk === 'month' ? MONTH_FOLDER : YEAR_FOLDER;

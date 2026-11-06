@@ -223,7 +223,7 @@ async function gcalSync() {
     while (state.gcalDel.length) { const gid = state.gcalDel[0]; await mcp.callTool(GCAL, 'delete_event', { eventId: gid }, { cache: false }); state.gcalDel.shift(); del++; save(); }
     ui.gc = { msg: 'Googleカレンダーに反映しました(追加 ' + made + '・変更 ' + upd + '・削除 ' + del + ')' };
   } catch (err) {
-    const M = { no_mcp: 'Googleカレンダーにつなげませんでした。Claudeのアプリで開いているか確認してください。', approval_required: 'Googleカレンダーへの反映が許可されていません。許可してから、もう一度押してください。', not_in_manifest: 'Googleカレンダーへの反映が許可されていません。', server_not_connected: 'Googleカレンダーがつながっていません。claude.aiの設定でGoogle Calendarを追加してください。', needs_reauth: 'Googleカレンダーの接続の期限が切れています。claude.aiの設定でつなぎ直してください。' };
+    const M = { no_mcp: 'Googleカレンダーにつなげませんでした。Claudeのアプリで開いているか確認してください。', approval_required: 'Googleカレンダーへの反映が許可されていません。許可してから、もう一度押してください。', not_in_manifest: 'Googleカレンダーへの反映が許可されていません。', server_not_connected: 'Googleカレンダーがつながっていません。claude.aiの設定でGoogle Calendarを追加してください。', needs_reauth: 'Googleカレンダーの接続の期限が切れています。claude.aiの設定でつなぎ直してください。', gauth: 'Googleのログインができませんでした。ポップアップを許可して、もう一度押してください(テストユーザーに入れたGoogleアカウントでログインします)。', gnet: 'Googleにつながりませんでした。通信を確認して、もう一度押してください。', gapi: 'Googleカレンダーに反映できませんでした。ログインし直してから、もう一度押してください。' };
     ui.gc = { err: M[err && err.code] || 'Googleカレンダーへの反映に失敗しました。もう一度お試しください。' };
   }
   save(); render();

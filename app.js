@@ -113,6 +113,7 @@ function viewSettings() {
     '<section class="sec"><h2 class="sh">設定</h2><div class="form"><div class="field"><span class="lbl">画面の色</span><div class="seg" role="group" aria-label="画面の色">' + THEMES_UI.map(t => '<button data-action="theme" data-v="' + t[0] + '" aria-pressed="' + ((state.theme || 'default') === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><div class="field"><span class="lbl">1週間の始まり</span>' +
     '<div class="seg col" role="group" aria-label="1週間の始まり">' + opts.map(o => '<button data-action="wks" data-v="' + o[0] + '" aria-pressed="' + (WKS === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
     '<div class="note">基本は土曜はじまり(土〜金)です。変えると、カレンダー・今週の目標・イベントクエストの週が、この曜日で区切られます。今週の目標の期間は、今日をふくむ週に合わせ直します。</div></div></div></section>' +
+    (window.IS_PWA ? '<section class="sec"><h2 class="sh">Googleカレンダー</h2><div class="form"><div class="note">カレンダーの画面の「Googleカレンダーに反映」を押すと、Googleのログインが出ます(ログインは約1時間ごとに必要です)。ログインに使うのは、アプリのテストユーザーに入れたアカウントです。</div><div class="bkrow"><button class="btn" data-action="gsignout">Googleとの接続を解除</button></div><small>' + (window.GAUTH && GAUTH.signedIn() ? '状態: ログイン中' : '状態: ログインしていません') + '</small></div></section>' : '') +
     '<section class="sec"><h2 class="sh"><span class="shl">データのバックアップ' + infoBtn('backup') + '</span></h2><div class="form">' +
     '<div class="note">いまの記録(クエスト・ステータス・ゴールド・目標・省察など)を、ファイルに保存できます。機種変更や、更新・初期化の前に取っておくと安心です。</div>' +
     '<div class="bkrow"><button class="btn primary" data-action="bkexport">ファイルに保存</button>' +
