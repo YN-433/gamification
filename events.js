@@ -26,6 +26,9 @@ document.addEventListener('click', e => {
   }
   if (a === 'gsignout') { if (window.GAUTH) GAUTH.signOut(); render(); toast('Googleとの接続を解除しました'); return; }
   if (a === 'bkexport') { backupExport(); return; }
+  if (a === 'dxlsx') { dataExport('xlsx'); return; }
+  if (a === 'dcsv') { dataExport('csv'); return; }
+  if (a === 'dmd') { dataExport('md'); return; }
   if (a === 'bkimport') { const f = document.getElementById('bkfile'); if (f) { f.value = ''; f.click(); } return; }
   if (a === 'bkcancel') { ui.bkArm = null; render(); return; }
   if (a === 'bkgo') { backupApply(); return; }
@@ -44,10 +47,16 @@ document.addEventListener('click', e => {
     const k = el.dataset.k;
     if (k === 'add') { const ar = goalAreas()[0]; ui.pop2 = { k: 'add', area: ar ? ar.name : '', name: '', stat: ar && ar.stats[0] ? ar.stats[0] : 'INT', boxes: 1, date: inRange(state.day, { start: ui.wk, end: addDays(ui.wk, 6) }) ? state.day : ui.wk, time: '09:00', tag: '', memo: '' }; }
     else if (k === 'ticket') ui.pop2 = { k: 'ticket', id: el.dataset.id, n: 1 };
-    else ui.pop2 = { k: k, id: el.dataset.id, star: 3 };
+    else ui.pop2 = { k: k, id: el.dataset.id, star: 3, rep: !!el.dataset.rep };
     render(); return;
   }
   if (a === 'popclose') { ui.pop2 = null; render(); return; }
+  if (a === 'evsave') {
+    const ta = document.querySelector('#pop textarea.memo'); const e = state.events.find(x => x.id === el.dataset.id);
+    if (e && ta) { const t = String(ta.value || '').slice(0, 500); if (t.trim()) e.memo = t; else delete e.memo; save(); }
+    ui.pop2 = null; render(); toast('保存しました'); return;
+  }
+  if (a === 'petset') { state.pet = el.dataset.v; save(); ui.pop2 = null; render(); toast(PETS[state.pet].name + 'にしました'); return; }
   if (a === 'pstar') { if (ui.pop2) { ui.pop2.star = +el.dataset.v; render(); } return; }
   if (a === 'pset') { if (ui.pop2) { const f = el.dataset.f; ui.pop2[f] = f === 'stat' ? el.dataset.v : +el.dataset.v; render(); } return; }
   if (a === 'report') {
@@ -88,7 +97,7 @@ document.addEventListener('click', e => {
   if (a === 'cv') { ui.cv = el.dataset.v; if (ui.cv === 'month') ui.mon = addDays(ui.wk, 3).slice(0, 7); else ui.calJump = true; render(); return; }
   if (a === 'monprev' || a === 'monnext') { const p = ui.mon.split('-').map(Number); const d = new Date(p[0], p[1] - 1 + (a === 'monnext' ? 1 : -1), 1); ui.mon = d.getFullYear() + '-' + pad(d.getMonth() + 1); render(); return; }
   if (a === 'mday') { ui.cv = 'week'; ui.wk = sundayOf(el.dataset.d); ui.calJump = true; render(); return; }
-  if (a === 'zoom') { calSave(); ui.zoom = clampN(ui.zoom + (+el.dataset.d), 0, ZOOMS.length - 1); render(); return; }
+  if (a === 'zoom') { calSave(); ui.zpx = clampN(zpx() * (+el.dataset.d > 0 ? 1.4 : 1 / 1.4), ZMIN, ZMAX); render(); return; }
   if (a === 'gcal') { gcalSync(); return; }
 
   /* クエスト */
@@ -146,9 +155,12 @@ document.addEventListener('click', e => {
   if (a === 'reflscore') { reflAI('score'); return; }
   if (a === 'reflauto') { const key = reflKey(ui.gk, state.goals[ui.gk]); const rf = state.refl[key] || (state.refl[key] = { text: '', score: null, done: false }); const h = questEval(ui.gk, state.goals[ui.gk]).hint; if (h != null && !rf.done) { rf.score = h; save(); render(); } return; }
   if (a === 'gk') { ui.gk = el.dataset.v; ui.patch = null; ui.questions = null; ui.err = ''; render(); return; }
-  if (a === 'yadd') { const t = String(ui.newYear || '').trim(); if (!t) return; state.goals.year.items.push({ t: t.slice(0, 60), done: false }); ui.newYear = ''; save(); render(); return; }
+  if (a === 'yadd') { const t = String(ui.newYear || '').trim(); if (!t) return; state.goals.year.items.push({ t: t.slice(0, 60), tags: (ui.newYearTags || []).concat(tagParse(ui.newYearTag)).filter((t, i, a) => a.indexOf(t) === i).slice(0, 8), d: String(ui.newYearD || '').trim().slice(0, 300), done: false }); ui.newYear = ''; ui.newYearTag = ''; ui.newYearTags = []; ui.newYearD = ''; save(); render(); return; }
   if (a === 'ytick') { const o = state.goals.year.items[+el.dataset.i]; if (o) { o.done = !o.done; save(); render(); if (o.done) toast('今年の目標をひとつ達成！'); } return; }
-  if (a === 'ydel') { state.goals.year.items.splice(+el.dataset.i, 1); save(); render(); return; }
+  if (a === 'yopen') { const i = +el.dataset.i; ui.yo = ui.yo || {}; ui.yo[i] = !ui.yo[i]; render(); return; }
+  if (a === 'yfo') { ui.yfo = !ui.yfo; render(); return; }
+  if (a === 'ytagtog') { const v = el.dataset.v; if (!v) ui.yTags = []; else { const s = ui.yTags || []; const k = s.indexOf(v); if (k >= 0) s.splice(k, 1); else s.push(v); ui.yTags = s; } render(); return; }
+  if (a === 'ydel') { ui.yo = {}; state.goals.year.items.splice(+el.dataset.i, 1); save(); render(); return; }
   if (a === 'deltoggle') { ui.delMode = !ui.delMode; render(); if (ui.delMode) toast('消したいクエストの×を押すか、見出しをゴミ箱へドラッグ'); return; }
   if (a === 'micf') { micField(el); return; }
   if (a === 'trayadd') { ui.trayAdd = !ui.trayAdd; render(); return; }
@@ -241,6 +253,8 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const el = e.target; const d = el.dataset || {};
+  if (d.yt != null) { const o = state.goals.year.items[+d.yt]; if (o) { o.tags = tagParse(el.value); delete o.tag; save(); } return; }
+  if (d.yd != null) { const o = state.goals.year.items[+d.yd]; if (o) { o.d = String(el.value).slice(0, 300); save(); } return; }
   if (el.id === 'bkfile') { backupRead(el.files && el.files[0]); return; }
   if (d.chg === 'evmove') {
     const ev = state.events.find(x => x.id === d.id); if (!ev || ev.done) return;
@@ -248,6 +262,7 @@ document.addEventListener('change', e => {
     if (!DATE_RE.test(date) || (d.k === 'time' && !el.value)) { render(); return; }
     ui.wk = sundayOf(date); commit(moveEvent(state, ev.id, date, start)); return;
   }
+  if (d.chg === 'evmemo') { const ev = state.events.find(x => x.id === d.id); if (ev) { const v = String(el.value || '').slice(0, 500); if (v.trim()) ev.memo = v; else delete ev.memo; save(); toast('メモを保存しました'); } return; }
   if (d.p === 'area' && ui.pop2) { ui.pop2.area = el.value; const ar = goalAreas().find(x => x.name === el.value); if (ar && ar.stats[0]) ui.pop2.stat = ar.stats[0]; render(); return; }
   if (d.ds) { render(); return; }
   if (d.ou != null) { const gg = state.goals[ui.gk]; const o = gg.outcomes[+d.ou]; if (o) { o.u = el.value; save(); } return; }
@@ -285,6 +300,10 @@ document.addEventListener('input', e => {
     const ok = box.parentNode.querySelector('[data-action="aok"],[data-action="ook"],[data-action="hok"]'); if (ok) ok.disabled = sum !== tot || !(box.parentNode.querySelector('input[type=text]') ? box.parentNode.querySelector('input[type=text]').value.trim() : true);
   } else if (d.hn) {
     const c = (state.hab || []).find(h => h.id === d.hn); if (c) { c.name = el.value; save(); const w = el.closest('.oed'); const b = w && w.querySelector('[data-action="hok"]'); const sm = w && w.querySelector('.dsum'); if (b && sm) b.disabled = !(sm.classList.contains('ok') && el.value.trim()); }
+  } else if (d.yt != null) {
+    const o = state.goals.year.items[+d.yt]; if (o) { o.tags = tagParse(el.value); delete o.tag; save(); }
+  } else if (d.yd != null) {
+    const o = state.goals.year.items[+d.yd]; if (o) { o.d = String(el.value).slice(0, 300); save(); }
   } else if (d.y != null) {
     const o = state.goals.year.items[+d.y]; if (o) { o.t = el.value; save(); }
   } else if (d.p && ui.pop2 && d.p !== 'area') {
@@ -300,7 +319,7 @@ document.addEventListener('input', e => {
     setPath(ui, d.ui, v);
   }
 });
-document.addEventListener('toggle', e => { const el = e.target; if (el.dataset && el.dataset.q) ui.qopen[el.dataset.q] = el.open; if (el.dataset && el.dataset.qa) ui.qo[el.dataset.qa] = el.open; }, true);
+document.addEventListener('toggle', e => { const el = e.target; if (el.dataset && el.dataset.q) ui.qopen[el.dataset.q] = el.open; if (el.dataset && el.dataset.qa) ui.qo[el.dataset.qa] = el.open; if (el.dataset && el.dataset.rd) { ui.rdo = ui.rdo || {}; ui.rdo[el.dataset.rd] = el.open; } }, true);
 // ウィジェットの長押しで編集モード
 let wHold = null;
 const wStart = t => { const w = t.closest && t.closest('.wdg'); if (!w || ui.wedit) return; clearTimeout(wHold); wHold = setTimeout(() => { ui.wedit = true; render(); if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } }, 600); };
@@ -325,9 +344,7 @@ async function backupExport() {
   const data = JSON.stringify({ app: 'gamification', format: 1, exported: now.toISOString(), state: state }, null, 1);
   const blob = new Blob([data], { type: 'application/json' });
   try {
-    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
-    if (dl) await dl.save({ filename: fname, data: blob });
-    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+    await saveBlob(blob, fname);
     state.lastBackup = stampJP(now); save(); render(); toast('バックアップを保存しました');
   } catch (e) { if (!e || e.code !== 'declined') toast('保存できませんでした'); }
 }
@@ -361,4 +378,112 @@ function backupApply() {
   if (!state.lastBackup) state.lastBackup = keepStamp;
   state = syncSP(state); applyTheme(); ui.wk = sundayOf(state.day); ui.calJump = true; ui.calPos = {}; ui.pop2 = null;
   save(); render(); toast('バックアップから戻しました');
+}
+
+/* ---- タグ入力(メモアプリのように、Enter・スペース・カンマで次々追加) ---- */
+function tagList(k) { return k === 'new' ? (ui.newYearTags = ui.newYearTags || []) : (state.goals.year.items[+k] ? (state.goals.year.items[+k].tags = state.goals.year.items[+k].tags || []) : null); }
+function tagCommit(inp) {
+  const k = inp.dataset.tin; const list = tagList(k); if (!list) return;
+  tagParse(inp.value).forEach(t => { if (list.indexOf(t) < 0 && list.length < 8) { list.push(t); inp.insertAdjacentHTML('beforebegin', tagChip(k, t)); } });
+  inp.value = ''; inp.placeholder = ''; if (k !== 'new') save();
+}
+document.addEventListener('keydown', e => {
+  const el = e.target; if (!el.dataset || el.dataset.tin == null || e.isComposing || e.keyCode === 229) return;
+  if (e.key === 'Enter' || e.key === ',' || e.key === '、' || e.key === ' ') { e.preventDefault(); tagCommit(el); }
+  else if (e.key === 'Backspace' && !el.value) { const list = tagList(el.dataset.tin); if (list && list.length) { const t = list.pop(); const ch = el.parentNode.querySelectorAll('.tgx'); if (ch.length) ch[ch.length - 1].remove(); if (el.dataset.tin !== 'new') save(); } }
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!el.dataset || el.dataset.tin == null || e.isComposing) return;
+  if (/[,、，\s]$/.test(el.value)) tagCommit(el);
+});
+document.addEventListener('focusout', e => { const el = e.target; if (el.dataset && el.dataset.tin != null && el.value.trim()) tagCommit(el); });
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-action="tagrm"]'); if (!b) return;
+  const list = tagList(b.dataset.k); if (!list) return; const k = list.indexOf(b.dataset.t); if (k >= 0) list.splice(k, 1);
+  const w = b.closest('.tgx'); if (w) w.remove(); if (b.dataset.k !== 'new') save(); e.stopPropagation();
+}, true);
+
+/* ---- 書き出し: Excel(.xlsx) / CSV(Notion用) / Markdown(Obsidian用) ---- */
+async function saveBlob(blob, fname) {
+  const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+  if (dl) await dl.save({ filename: fname, data: blob });
+  else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+}
+const XK = { id: 'ID', date: '日付', start: '開始', area: '名前・領域', name: '名前', boxes: 'BOX', star: '質(星)', done: '完了', fin: '確定済み', xp: 'XP', g: 'ゴールド', spent: '使用G', memo: 'メモ', tag: 'タグ', kind: '種類', hk: '習慣ID', t: '内容', text: '内容', score: '点数', comment: 'コメント', value: '値', want: '希望', work: '仕事', locked: 'ロック', ed: '編集済み', gk: '期間', cat: 'カテゴリ', alloc: '配分', xpBy: 'XP内訳', dist: '配分' };
+const xflat = (o, pre, out) => { out = out || {}; Object.keys(o || {}).forEach(k => { const v = o[k]; const key = pre ? pre + '.' + k : k;
+  if (v && typeof v === 'object' && !Array.isArray(v)) xflat(v, key, out); else out[key] = Array.isArray(v) ? v.map(x => (x && typeof x === 'object') ? JSON.stringify(x) : x).join(' / ') : v; }); return out; };
+const xname = k => k.split('.').map(s => XK[s] || s).join('.');
+const hm = m => (m == null || m === '') ? '' : pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+// 配列(オブジェクトの一覧)→ 表(1行目が見出し)
+function xtable(list, pre) {
+  const rows = (list || []).map(o => (o && typeof o === 'object') ? xflat(o) : { 値: o });
+  const cols = []; rows.forEach(r => Object.keys(r).forEach(k => { if (cols.indexOf(k) < 0) cols.push(k); }));
+  const first = ['date', 'id'].filter(k => cols.indexOf(k) >= 0); cols.sort((a, b) => (first.indexOf(a) < 0 ? 99 : first.indexOf(a)) - (first.indexOf(b) < 0 ? 99 : first.indexOf(b)));
+  return [cols.map(xname)].concat(rows.map(r => cols.map(c => c === 'start' ? hm(r[c]) : (r[c] == null ? '' : r[c]))));
+}
+function exportSheets() {
+  const s = state; const sh = [];
+  const total = sumPts(s.pts);
+  sh.push(['サマリー', [['項目', '値'], ['書き出した日時', stampJP(new Date())], ['今日', s.day], ['周回', s.cycle], ['総合ランク', rankOf(total).label], ['総合Pt', total], ['ゴールド', s.gold]]
+    .concat(STATS.map(x => [x.name + '(' + x.id + ')', s.pts[x.id] || 0])).concat([['スキルポイント', s.sp]]).concat(SKILLS.map(k => [k.name + ' Lv', (s.skills || {})[k.id] || 0]))]);
+  sh.push(['予定と実績', xtable(s.events)]);
+  sh.push(['クエスト記録', xtable(s.log)]);
+  sh.push(['今年の目標', [['目標', 'タグ', '説明', '達成']].concat(s.goals.year.items.map(o => [o.t, oTags(o).join(' '), o.d || '', o.done ? '達成' : '']))]);
+  ['week', 'month'].forEach(k => { const g = s.goals[k]; const nm = k === 'week' ? '週' : '月';
+    sh.push([nm + 'の目標', [['期間', '種類', '名前', '目標値', '単位', '配分・メモ']].concat((g.areas || []).map(a => [g.start + '〜' + g.end, 'クエスト', a.name, a.value, a.unit || '', Object.keys(a.dist || {}).map(x => x + ' ' + a.dist[x]).join(' / ')]))
+      .concat((g.outcomes || []).map(o => [g.start + '〜' + g.end, '成果目標', o.t, o.n == null ? '' : o.n, o.u || '', o.done ? '達成' : '']))]); });
+  sh.push(['省察', [['対象', '内容', '点数', 'コメント', '完了']].concat(Object.keys(s.refl || {}).sort().map(k => { const r = s.refl[k]; return [k, r.text || '', r.score == null ? '' : r.score, r.comment || '', r.done ? '完了' : '']; }))]);
+  sh.push(['ジャーナル', [['日付', '内容']].concat(Object.keys(s.journal || {}).sort().map(k => { const j = s.journal[k]; return [k, typeof j === 'string' ? j : (j && (j.text || j.summary)) || JSON.stringify(j)]; }))]);
+  sh.push(['習慣', xtable(s.hab)]);
+  sh.push(['ショップの購入', xtable(s.shopLog)]);
+  sh.push(['所持チケット', [['アイテム', '数']].concat(Object.keys(s.inv || {}).filter(k => s.inv[k] > 0).map(k => { const it = shopItems(s).find(x => x.id === k); return [it ? it.name : k, s.inv[k]]; }))]);
+  return sh.filter(x => x[1].length);
+}
+// ---- 最小のZIP(無圧縮)。xlsxもZIPなので、ライブラリなしで作る ----
+const crcT = (() => { const t = []; for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+const crc32 = b => { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = crcT[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+function zipStore(files) {
+  const enc = new TextEncoder(); const parts = []; const cen = []; let off = 0;
+  const u16 = n => [n & 255, (n >> 8) & 255], u32 = n => [n & 255, (n >> 8) & 255, (n >> 16) & 255, (n >>> 24) & 255];
+  files.forEach(f => { const nm = enc.encode(f.name); const d = typeof f.data === 'string' ? enc.encode(f.data) : f.data; const c = crc32(d);
+    const h = new Uint8Array([0x50, 0x4b, 3, 4, 20, 0, 0, 8, 0, 0, 0, 0, 0x21, 0, ...u32(c), ...u32(d.length), ...u32(d.length), ...u16(nm.length), 0, 0]);
+    parts.push(h, nm, d);
+    cen.push(new Uint8Array([0x50, 0x4b, 1, 2, 20, 0, 20, 0, 0, 8, 0, 0, 0, 0, 0x21, 0, ...u32(c), ...u32(d.length), ...u32(d.length), ...u16(nm.length), 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ...u32(off)]), nm);
+    off += h.length + nm.length + d.length; });
+  const cl = cen.reduce((a, x) => a + x.length, 0);
+  return new Blob(parts.concat(cen, [new Uint8Array([0x50, 0x4b, 5, 6, 0, 0, 0, 0, ...u16(files.length), ...u16(files.length), ...u32(cl), ...u32(off), 0, 0])]));
+}
+const xe = v => String(v).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function colL(i) { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; }
+function xlsxBlob(sheets) {
+  const used = {}; const names = sheets.map(x => { let n = x[0].replace(/[\[\]:*?\/\\]/g, '').slice(0, 31) || 'Sheet'; while (used[n]) n = n.slice(0, 28) + '_' + (Object.keys(used).length); used[n] = 1; return n; });
+  const files = [
+    { name: '[Content_Types].xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + sheets.map((x, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '</Types>' },
+    { name: '_rels/.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>' },
+    { name: 'xl/workbook.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + names.map((n, i) => '<sheet name="' + xe(n) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>').join('') + '</sheets></workbook>' },
+    { name: 'xl/_rels/workbook.xml.rels', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + sheets.map((x, i) => '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>').join('') + '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>' },
+    { name: 'xl/styles.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Yu Gothic"/></font><font><b/><sz val="11"/><name val="Yu Gothic"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/></cellXfs></styleSheet>' }
+  ];
+  sheets.forEach((x, si) => {
+    const rows = x[1].map((r, ri) => '<row r="' + (ri + 1) + '">' + r.map((v, ci) => { const ref = colL(ci) + (ri + 1); const st = ri === 0 ? ' s="1"' : '';
+      if (v === '' || v == null) return '';
+      if (typeof v === 'number' && isFinite(v)) return '<c r="' + ref + '"' + st + '><v>' + v + '</v></c>';
+      if (typeof v === 'boolean') return '<c r="' + ref + '"' + st + ' t="b"><v>' + (v ? 1 : 0) + '</v></c>';
+      return '<c r="' + ref + '"' + st + ' t="inlineStr"><is><t xml:space="preserve">' + xe(v) + '</t></is></c>'; }).join('') + '</row>').join('');
+    const nc = Math.max.apply(null, x[1].map(r => r.length));
+    files.push({ name: 'xl/worksheets/sheet' + (si + 1) + '.xml', data: '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols><col min="1" max="' + nc + '" width="22" customWidth="1"/></cols><sheetData>' + rows + '</sheetData></worksheet>' });
+  });
+  const b = zipStore(files); return new Blob([b], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+}
+const csvCell = v => { v = v == null ? '' : String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+const mdCell = v => String(v == null ? '' : v).replace(/\|/g, '\\|').replace(/\r?\n/g, '<br>');
+async function dataExport(kind) {
+  const now = new Date(); const p2 = n => String(n).padStart(2, '0'); const st = now.getFullYear() + p2(now.getMonth() + 1) + p2(now.getDate());
+  try {
+    const sheets = exportSheets(); let blob, fname;
+    if (kind === 'xlsx') { blob = xlsxBlob(sheets); fname = 'gamification-' + st + '.xlsx'; }
+    else if (kind === 'csv') { blob = zipStore(sheets.map(x => ({ name: x[0] + '.csv', data: '﻿' + x[1].map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n' }))); fname = 'gamification-csv-' + st + '.zip'; }
+    else { const md = '# ゲーミフィケーション 記録(' + stampJP(now) + ')\n\n' + sheets.map(x => '## ' + x[0] + '\n\n| ' + x[1][0].map(mdCell).join(' | ') + ' |\n|' + x[1][0].map(() => '---').join('|') + '|\n' + x[1].slice(1).map(r => '| ' + x[1][0].map((_, i) => mdCell(r[i])).join(' | ') + ' |').join('\n') + '\n').join('\n'); blob = new Blob([md], { type: 'text/markdown' }); fname = 'gamification-' + st + '.md'; }
+    await saveBlob(blob, fname); toast('書き出しました');
+  } catch (e) { if (!e || e.code !== 'declined') toast('書き出せませんでした'); }
 }

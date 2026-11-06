@@ -42,12 +42,25 @@ function migrate45(s) {
   n.goals.year = { year: Number(n.day.slice(0, 4)), items: [] };
   return n;
 }
+// ステータスの入れ替え: 免疫(IMM)+体力(STR) → 健康(HLT)、新しく技術(TEC)。古い保存データ・バックアップを自動で変換する
+function migrateStats(s) {
+  const fix = v => (v === 'IMM' || v === 'STR') ? 'HLT' : v;
+  (function walk(o) {
+    if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) { if (typeof o[i] === 'string') o[i] = fix(o[i]); else if (o[i] && typeof o[i] === 'object') walk(o[i]); } return; }
+    if (!o || typeof o !== 'object') return;
+    if ('IMM' in o || 'STR' in o) { o.HLT = (Number(o.HLT) || 0) + (Number(o.IMM) || 0) + (Number(o.STR) || 0); delete o.IMM; delete o.STR; }
+    if ('CHA' in o && 'REG' in o && !('TEC' in o)) o.TEC = 0;
+    Object.keys(o).forEach(k => { const v = o[k]; if (typeof v === 'string') o[k] = fix(v); else if (v && typeof v === 'object') walk(v); });
+  })(s);
+  if (s.goals && s.goals.year && Array.isArray(s.goals.year.items)) s.goals.year.items.forEach(o => { if (!Array.isArray(o.tags)) o.tags = o.tag ? [o.tag] : []; delete o.tag; if (o.d == null) o.d = ''; });
+  return s;
+}
 function migrate(s) {
   if (!s) return null;
   if (s.v === 2) s = migrate23(s);
   if (s && s.v === 3) s = migrate34(s);
   if (s && s.v === 4) s = migrate45(s);
-  return s && s.v === 5 ? s : null;
+  return s && s.v === 5 ? migrateStats(s) : null;
 }
 function load() {
   try {
@@ -63,8 +76,20 @@ function setPath(obj, path, val) { const k = path.split('.'); let o = obj; for (
 let state = rollover(load() || seedState(iso(new Date())), iso(new Date()));
 if (state.wkStart != null) WKS = state.wkStart;
 const THEMES_UI = [['default', 'デフォルト'], ['white', 'ホワイト'], ['dark', 'ダーク']];
-function applyTheme() { document.documentElement.setAttribute('data-theme', { default: 'light', white: 'white', dark: 'dark' }[state.theme || 'default'] || 'light'); }
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', { default: 'light', white: 'white', dark: 'dark' }[state.theme || 'default'] || 'light');
+  // ステータスバー・ナビゲーションの色を、アプリの背景色に合わせる
+  try {
+    const bg = (getComputedStyle(document.documentElement).getPropertyValue('--bg') || '').trim() || '#E9EFED';
+    document.documentElement.style.backgroundColor = bg;
+    let m = document.querySelector('meta[name="theme-color"]');
+    if (!m) { m = document.createElement('meta'); m.setAttribute('name', 'theme-color'); document.head.appendChild(m); }
+    m.setAttribute('content', bg);
+  } catch (e) {}
+}
 applyTheme();
+// 今年の目標: 古い保存データの tag(1つ)を tags(複数)へ
+(function () { state.goals.year.items.forEach(o => { if (!Array.isArray(o.tags)) { o.tags = o.tag ? [o.tag] : []; } delete o.tag; if (o.d == null) o.d = ''; }); })();
 ['events', 'log', 'notices', 'gcalDel'].forEach(k => { if (!state[k]) state[k] = []; });
 ['journal', 'closed', 'inv'].forEach(k => { if (!state[k]) state[k] = {}; });
 if (!state.pend) state.pend = { pts: {}, gold: 0 };
@@ -83,7 +108,7 @@ const ui = {
   pop2: null, petMsg: '', petJump: 0, wedit: false, gc: null, sh: 'shop', addItem: false,
   ni: { name: '', cat: '', g: 500, mp: 20, stat: 'INT', pt: 0 }, ge: { o: false, h: false }, wcv: 'week', qopen: { sub: true, ur: true, ev: true, ao: true, over: true }, qo: {}, edH: null, delMode: false, trayAdd: false, zoom: 1, calPos: {}, calJump: false, cv: 'week', mon: iso(new Date()).slice(0, 7), draft: {}, talk: '', talkOpen: false, rec: false, jbusy: false, jerr: '',
   gk: 'week', voice: '', patch: null, questions: null, busy: '', err: '', sample: null, ctl: null, pdf: null,
-  h: { energy: 78, steps: 6800, sleep: 7.2 }, newYear: ''
+  h: { energy: 78, steps: 6800, sleep: 7.2 }, newYear: '', newYearTag: '', newYearD: '', newYearTags: [], yTags: [], yfo: false, yo: {}, rdo: {}
 };
 let toastTimer = null;
 function toast(msg) {
@@ -108,7 +133,7 @@ function condition() {
   return { t: '絶不調', c: 'c1' };
 }
 
-/* ---- ドットのキャラ ---- */
+/* ---- ドットのキャラ(クジラ・ペンギン・ネコ・イヌ・インコ) ---- */
 const PET = [
   '...www......www.............',
   '..wwwww.ww.wwwww..K....K....',
@@ -126,10 +151,23 @@ const PET = [
   '..KKKKKKKKKKKKKKKKK.........'
 ];
 const PETC = { K: '#17324a', b: '#5aa7e6', c: '#dff1ff', E: '#17324a', W: '#ffffff', p: '#9db3c6', m: '#17324a', w: '#9fdcff' };
-function petSVG(px, cls) {
-  const W = PET[0].length, H = PET.length; let r = '';
-  PET.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const c = row[x]; if (c === '.') continue; r += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + PETC[c] + '"' + (c === 'E' || c === 'W' ? ' class="eye"' : c === 'w' ? ' class="spout"' : '') + '/>'; } });
-  return '<svg class="' + (cls || '') + '" viewBox="0 0 ' + W + ' ' + H + '" width="' + px + '" height="' + Math.round(px * H / W) + '" shape-rendering="crispEdges" aria-hidden="true">' + r + '</svg>';
+// 左右対称のキャラは、左半分(8マス)だけ書いて、右を鏡うつしにする
+const mirrorRows = h => h.map(r => r + r.split('').reverse().join(''));
+const PETS = {
+  whale: { name: 'クジラ', rows: PET, c: PETC, scale: 1 },
+  penguin: { name: 'ペンギン', scale: 0.62, c: { K: '#17324a', b: '#3b4a68', v: '#ffffff', o: '#f6a21e', E: '#17324a', W: '#ffffff' }, rows: mirrorRows([
+    '.....KKK', '...KKbbb', '..Kbbbbb', '..KbbWEb', '.Kbbbbbo', '.Kbbbvvv', 'Kbbbbvvv', 'Kbbbbvvv', 'Kbbbbvvv', '.Kbbbvvv', '.Kbbbvvv', '..Kbbvvv', '..KKbbvv', '...KKKbb', '...ooo..', '..oooo..']) },
+  cat: { name: 'ネコ', scale: 0.62, c: { K: '#5a3418', b: '#f0a95a', c: '#ffe8c7', p: '#f08fa0', n: '#e0607a', E: '#3a2410', W: '#ffffff' }, rows: mirrorRows([
+    '.KK.....', '.KbpK...', '.KbbbKKK', 'Kbbbbbbb', 'Kbbbbbbb', 'KbbWEbbb', 'Kbbbbbbb', 'Kbbbbccn', '.Kbbbccc', '..KKbbbb', '..Kbbbbc', '..Kbbbcc', '..Kbbbcc', '..Kbbbbb', '..KcccK.', '..KKKKK.']) },
+  dog: { name: 'イヌ', scale: 0.62, c: { K: '#4a2d17', b: '#c48a52', c: '#f6e3cb', d: '#7a4a26', n: '#2b2b2b', t: '#f06c7c', E: '#2b1a0c', W: '#ffffff' }, rows: mirrorRows([
+    '..KKKKKK', '.Kbbbbbb', 'Kdbbbbbb', 'KddbWEbb', 'Kddbbbbb', 'Kddbbccc', '.Kdbcccn', '.Kdbcccc', '..KKccct', '...KKKKK', '..Kbbbcc', '..Kbbbcc', '..Kbbccc', '..KcccKK', '..KKKKK.', '........']) },
+  parakeet: { name: 'インコ', scale: 0.62, c: { K: '#1f4d2a', y: '#ffe066', g: '#6fcf5a', l: '#3da34a', u: '#5aa7e6', o: '#f08a24', E: '#1f2a1f', W: '#ffffff' }, rows: mirrorRows([
+    '....KKKK', '..KKyyyy', '.Kyyyyyy', '.KyyWEyy', 'Kyyyyyyo', 'Kyyuuyyo', '.Kyyyyyg', '.Kgggggg', 'Kgllgggg', 'Kgllgggg', 'Kgllgggg', '.Kglllgg', '..KKlggg', '...KKggg', '...Kooo.', '........']) }
+};
+function petSVG(px, cls, id) {
+  const P = PETS[id || state.pet] || PETS.whale; const rows = P.rows; const C = P.c; const W = rows[0].length, H = rows.length; const w = Math.round(px * (id ? 1 : P.scale)); let r = '';
+  rows.forEach((row, y) => { for (let x = 0; x < row.length; x++) { const c = row[x]; if (c === '.') continue; r += '<rect x="' + x + '" y="' + y + '" width="1.02" height="1.02" fill="' + C[c] + '"' + (c === 'E' || c === 'W' ? ' class="eye"' : (c === 'w' && P === PETS.whale) ? ' class="spout"' : '') + '/>'; } });
+  return '<svg class="' + (cls || '') + '" viewBox="0 0 ' + W + ' ' + H + '" width="' + w + '" height="' + Math.round(w * H / W) + '" shape-rendering="crispEdges" aria-hidden="true">' + r + '</svg>';
 }
 const PET_LINES = ['今日もいっしょにがんばろ！', 'ふわぁ…ねむい…', 'BOX、何個いけそう？', 'なでなで、うれしい！', 'ちょっと休憩しよっか', '水のんだ？', 'その調子！', 'おなかすいた〜', '今日の予定、見てみる？',
   'イベントクエスト、やってみよ！', 'えへへ', 'がんばりすぎてない？', 'よく寝た？', '外の空気すいたいな', 'ゴールドで何買う？', 'ちいさな一歩でOK！', 'きみならできる！', 'のびーっ', 'ストレッチしよ！',
@@ -170,12 +208,12 @@ function viewHome() {
       '<button class="petbtn" data-action="pet" aria-label="キャラをタップ"><span class="petw"><span class="peti' + (ui.petJump ? ' jump' + (ui.petJump % 2) : '') + '">' + petSVG(112) + '</span></span></button>' +
       '<div class="sea" aria-hidden="true"></div><div class="ground" aria-hidden="true"></div></section>' +
     '<section class="sec"><h2 class="sh"><span class="shl">ステータス' + infoBtn('stats') + '</span></h2><div class="sgrid">' + cards + '</div></section>' +
-    '<section class="sec"><h2 class="sh">スキル<button class="plus" data-action="sub" data-v="skills" aria-label="スキル獲得画面へ">＋</button></h2>' +
-      '<div class="spline">SP <b class="num">' + free + '</b> pt' + (free > 0 ? '<small>　＋からスキルに割り振れます</small>' : '') + '</div>' +
-      '<div class="skchips">' + (sk || '<span class="note">まだ習得したスキルはありません。</span>') + '</div><small>Lv.6以上は金スキルになります。タップで詳細。</small></section>' +
-    '<section class="sec"><h2 class="sh">チケット<button class="plus" data-action="tab" data-tab="shop" aria-label="券買所へ">＋</button></h2>' +
+    '<section class="sec"><h2 class="sh"><span class="shl">スキル' + infoBtn('hskill') + '</span><button class="plus" data-action="sub" data-v="skills" aria-label="スキル獲得画面へ">＋</button></h2>' +
+      '<div class="spline">SP <b class="num">' + free + '</b> pt</div>' +
+      '<div class="skchips">' + (sk || '<span class="note">まだ習得したスキルはありません。</span>') + '</div></section>' +
+    '<section class="sec"><h2 class="sh"><span class="shl">チケット' + infoBtn('htkt') + '</span><button class="plus" data-action="tab" data-tab="shop" aria-label="券買所へ">＋</button></h2>' +
       '<div class="spline">所持ゴールド <b class="num" style="color:var(--gold)">' + fmt(state.gold) + '</b> G' + (state.pend.gold ? '<small>　(獲得予定 +' + fmt(state.pend.gold) + ' G)</small>' : '') + '</div>' +
-      '<div class="tkts">' + (inv || '<span class="note">持っている券はありません。＋から券買所へ。</span>') + '</div><small>タップで使う枚数を決めて使えます(実物を買ったあとに使います)。</small></section>' +
+      '<div class="tkts">' + (inv || '<span class="note">持っている券はありません。＋から券買所へ。</span>') + '</div></section>' +
     '<section class="sec"><h2 class="sh">達成度</h2>' +
       prog('今日', tD, tP, 'BOX', 'カレンダーの今日の予定から') +
       prog('今週', periodBoxes(state, wk).d, sumBoxes(wk), 'BOX', '今週の目標から') +

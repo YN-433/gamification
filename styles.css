@@ -16,8 +16,8 @@
   --mp-fill: #2F9ED8;
   --warn: #B9400B;
   --cha: #CF3F75;
-  --imm: #1F8A55;
-  --str: #D0521B;
+  --hlt: #1F8A55;
+  --tec: #D0521B;
   --reg: #7452C4;
   --int: #2269BF;
   --font-display: 'Dela Gothic One', 'Zen Kaku Gothic New', 'Hiragino Sans', 'Noto Sans JP', sans-serif;
@@ -28,14 +28,14 @@
   :root:not([data-theme="light"]) {
     --bg: #0B1619; --surface: #12232A; --surface-2: #1B323A; --ink: #E5F0EE; --muted: #93AAAC; --line: #26414A;
     --accent: #3ECB98; --on-accent: #05221A; --gold: #F2BC45; --gold-fill: #F2B632; --mp: #5BBDF0; --mp-fill: #3AA5DE; --warn: #FF9A62;
-    --cha: #F27AA3; --imm: #55CC88; --str: #FF9360; --reg: #AB90F0; --int: #6CA9F5;
+    --cha: #F27AA3; --hlt: #55CC88; --tec: #FF9360; --reg: #AB90F0; --int: #6CA9F5;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --bg: #0B1619; --surface: #12232A; --surface-2: #1B323A; --ink: #E5F0EE; --muted: #93AAAC; --line: #26414A;
   --accent: #3ECB98; --on-accent: #05221A; --gold: #F2BC45; --gold-fill: #F2B632; --mp: #5BBDF0; --mp-fill: #3AA5DE; --warn: #FF9A62;
-  --cha: #F27AA3; --imm: #55CC88; --str: #FF9360; --reg: #AB90F0; --int: #6CA9F5;
+  --cha: #F27AA3; --hlt: #55CC88; --tec: #FF9360; --reg: #AB90F0; --int: #6CA9F5;
   color-scheme: dark;
 }
 
@@ -73,7 +73,7 @@ h2.sh { font-family: var(--font-display); font-size: 15px; font-weight: 400; mar
 .tier-a { --tier: var(--accent); }
 .tier-s { --tier: var(--mp); }
 .tier-sss { --tier: var(--gold); }
-.tier-ue { --tier: var(--str); }
+.tier-ue { --tier: var(--tec); }
 .tier-ud { --tier: var(--reg); }
 
 /* hero */

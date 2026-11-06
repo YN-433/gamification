@@ -30,41 +30,65 @@ function yearFacts(y) {
   const sub = state.log.filter(x => x.kind === 'sub' && x.date.slice(0, 4) === yr).length;
   const ev = state.log.filter(x => x.kind === 'event' && x.date.slice(0, 4) === yr).length;
   const ur = state.log.filter(x => x.kind === 'urgent' && x.date.slice(0, 4) === yr).length;
-  return { year: y.year, items: y.items, months: months, tp: months.reduce((a, x) => a + x.p, 0), td: dd, star: dd ? sw / dd : 0, sub: sub, ev: ev, ur: ur };
+  // 年のはじめから今日まで(未来は数えない)の週ごとの、イベント・緊急クエストの数と達成数
+  let evT = 0, evN = 0, urT = 0, urN = 0, subT = 0;
+  const last = state.day < yr + '-12-31' ? state.day : yr + '-12-31';
+  for (let w = sundayOf(yr + '-01-01'); w <= last; w = addDays(w, 7)) {
+    const ew = eventWeek(w); evT += ew.quests.length; evN += ew.quests.filter(q => qDone(q.key)).length;
+    const u = urgentInWeek(w); urT += u.length; urN += u.filter(q => qDone(q.key)).length;
+    const h = state.hist && state.hist['week:' + w];
+    if (h && h.habits) habList().forEach(k => { const n = Number(h.habits[k[0]]) || 0; const u2 = (h.hunits && h.hunits[k[0]]) || '回'; if (n > 0 && (u2 === '回' || u2 === '日')) subT += n; });
+  }
+  return { year: y.year, items: y.items, months: months, tp: months.reduce((a, x) => a + x.p, 0), td: dd, star: dd ? sw / dd : 0, sub: sub, ev: ev, ur: ur, evT: evT, evN: evN, urT: urT, urN: urN, subT: subT };
 }
 const rowH = (n, t, u, opt) => '<div class="evr x3"><span class="cn">' + esc(opt.name) + '</span><span class="num' + (t && n >= t ? ' ok' : '') + '">' + n + ' / ' + t + ' ' + u + '</span><span class="num"><small>' + (t ? pctOf(n, t) + '%' : '—') + '</small></span></div>';
 const headH = (a, b, c) => '<div class="evr x3 hd"><span>' + a + '</span><span>' + b + '</span><span>' + c + '</span></div>';
+// 各項目: 見出しに全体の達成度(数字とバー)だけ出し、詳細はプルダウンで開く
+function rdet(id, title, sumHTML, pct, body, info) {
+  return '<details class="rd" data-rd="' + id + '"' + (ui.rdo && ui.rdo[id] ? ' open' : '') + '><summary><span class="rdt">' + title + '</span><span class="rds">' + sumHTML + '</span><span class="rdc">⌄</span>' + (pct != null ? '<span class="rdb">' + barHTML(pct, 'var(--accent)') + '</span>' : '') + '</summary><div class="rdbody">' + body + '</div></details>';
+}
+const sumN = (n, t, u) => '<b class="num">' + n + ' / ' + t + '</b>' + (u ? ' <small>' + u + '</small>' : '') + (t ? ' <em>' + pctOf(n, t) + '%</em>' : '');
+function yearGoalsBody(F) {
+  const sh = yShown();
+  const rows = sh.map(x => '<div class="yitem"><div class="yrow' + (x.o.done ? ' done' : '') + '"><button class="tick" data-action="ytick" data-i="' + x.i + '" aria-label="達成にする" aria-pressed="' + !!x.o.done + '"><span class="check">' + (x.o.done ? '✓' : '') + '</span></button><button class="yt ytb" data-action="yopen" data-i="' + x.i + '" aria-expanded="' + !!(ui.yo && ui.yo[x.i]) + '">' + esc(x.o.t) + '</button></div>' + yDet(x.o, x.i) + '</div>').join('');
+  return '<div class="yfrow">' + (yTags().length ? '<span class="lbl">タグで絞り込み</span>' : '<small>タグをつけると、ここで絞り込めます。</small>') + '</div>' + yFilterPanel(true) + (rows || '<div class="note">' + (F.items.length ? 'このタグの目標はありません。' : '今年の目標がありません。') + '</div>') + '<small>チェックをつけると、達成にできます。</small>';
+}
 function reflFactsHTML(gk, g, label) {
   const F = reflFacts(gk, g);
+  const evc = inner => '<div class="cmp evc">' + inner + '</div>';
   if (gk === 'year') {
-    const items = F.items.map(o => '<div class="evr x3"><span class="cn">' + esc(o.t) + '</span><span class="' + (o.done ? 'ok' : '') + '">' + (o.done ? '達成' : '未達成') + '</span><span></span></div>').join('');
-    return '<div class="rsec"><span class="lbl">今年の目標<small>　' + F.items.filter(o => o.done).length + ' / ' + F.items.length + ' 達成</small></span><div class="cmp evc">' + (items || '<div class="note" style="padding:8px 10px">今年の目標がありません。</div>') + '</div></div>' +
-      '<div class="rsec"><span class="lbl">月ごとのBOX<small>　レコードから(達成 / 予定)　全体 ' + F.td + ' / ' + F.tp + ' BOX</small></span><div class="cmp evc">' + headH('月', '達成 / 予定', '') +
-      F.months.filter(m => m.p).map(m => rowH(m.d, m.p, 'BOX', { name: m.m + '月' })).join('') + (F.tp ? '' : '<div class="note" style="padding:8px 10px">予定はまだありません。</div>') + '</div>' +
-      '<div class="note">質(星)の平均 ' + (F.star ? F.star.toFixed(1) : '—') + '</div></div>' +
-      '<div class="rsec"><span class="lbl">クエスト達成数<small>　1年で</small></span><div class="cmp evc"><div class="evr x3"><span class="cn">サブクエスト(習慣)</span><span class="num">' + F.sub + ' 回</span><span></span></div><div class="evr x3"><span class="cn">イベントクエスト</span><span class="num">' + F.ev + ' 件</span><span></span></div><div class="evr x3"><span class="cn">緊急クエスト</span><span class="num">' + F.ur + ' 件</span><span></span></div></div></div>';
+    const dn = F.items.filter(o => o.done).length;
+    const star = F.star ? ' ・ 質(星)の平均 ' + F.star.toFixed(1) : '';
+    return rdet('y-goal', '今年の目標', sumN(dn, F.items.length, '達成'), pctOf(dn, F.items.length), yearGoalsBody(F)) +
+      rdet('y-box', '月ごとのBOX', sumN(F.td, F.tp, 'BOX'), pctOf(F.td, F.tp), evc(headH('月', '達成 / 予定', '') + F.months.filter(m => m.p).map(m => rowH(m.d, m.p, 'BOX', { name: m.m + '月' })).join('') + (F.tp ? '' : '<div class="note" style="padding:8px 10px">予定はまだありません。</div>')) + '<div class="note">' + (star ? star.slice(3) : '質(星)の平均 —') + '</div>') +
+      rdet('y-sub', 'サブクエスト(習慣)', sumN(Math.min(F.sub, F.subT || F.sub), F.subT, '回'), F.subT ? pctOf(F.sub, F.subT) : null, evc('<div class="evr x3"><span class="cn">1年でこなした回数</span><span class="num">' + F.sub + ' 回</span><span></span></div>' + (F.subT ? '<div class="evr x3"><span class="cn">目標の合計(決定した週)</span><span class="num">' + F.subT + ' 回</span><span></span></div>' : ''))) +
+      rdet('y-ev', 'イベントクエスト', sumN(F.evN, F.evT, '件'), pctOf(F.evN, F.evT), evc('<div class="evr x3"><span class="cn">今日までのイベント</span><span class="num">' + F.evN + ' / ' + F.evT + ' 件</span><span></span></div>')) +
+      rdet('y-ur', '緊急クエスト', '<b class="num">' + F.urN + '</b> <small>件こなした(出た数 ' + F.urT + ')</small>', null, evc('<div class="evr x3"><span class="cn">こなした数 / 出た数</span><span class="num">' + F.urN + ' / ' + F.urT + ' 件</span><span></span></div>') + '<div class="note">やらなくてよい追加枠です。できたらすごい！</div>');
   }
   const qe = F.qe; let h = '';
   // 1) メインクエスト
-  h += '<div class="rsec"><span class="lbl">クエスト評価<small>　レコードから(予定していたBOXと、質の星)</small></span>' +
+  h += rdet('box', 'クエスト評価(BOX)', sumN(F.td, F.tp, 'BOX') + (qe.star ? ' <small>★' + qe.star.toFixed(1) + '</small>' : ''), pctOf(F.td, F.tp),
     (qe.rows.length ? '<div class="cmp evc"><div class="evr hd"><span>クエスト(' + label + ')</span><span>達成 / 予定</span><span>質(星)</span></div>' + qe.rows.map(x =>
       '<div class="evr"><span class="cn">' + esc(x.name) + '</span><span class="num' + (x.plan && x.d >= x.plan ? ' ok' : '') + '">' + x.d + ' / ' + x.plan + ' BOX<small>' + Math.round(x.rate * 100) + '%</small></span><span class="evs">' + (x.d ? starsHTML(x.star) + '<small>' + x.star.toFixed(1) + '</small>' : '<small>—</small>') + '</span></div>').join('') +
       '<div class="evr tot"><span class="cn">' + (gk === 'week' ? '週全体' : '月全体') + '</span><span class="num">' + F.td + ' / ' + F.tp + ' BOX<small>' + pctOf(F.td, F.tp) + '%</small></span><span class="evs">' + (qe.star ? starsHTML(qe.star) + '<small>' + qe.star.toFixed(1) + '</small>' : '<small>—</small>') + '</span></div></div>'
-      : '<div class="note">' + label + 'の予定・実績はまだありません。</div>') + '</div>';
+      : '<div class="note">' + label + 'の予定・実績はまだありません。</div>'));
   // 2) サブクエスト(習慣目標)
-  h += '<div class="rsec"><span class="lbl">サブクエスト(習慣目標)<small>　レコードの達成回数</small></span>' +
-    (F.subs.length ? '<div class="cmp evc">' + headH('習慣', '達成 / 目標', '') + F.subs.map(s => rowH(s.n, s.t, s.u === '日' || s.u === '回' ? s.u : '回(目標' + s.u + ')', { name: s.name })).join('') + '</div>' : '<div class="note">' + (F.hasSnap ? '習慣の目標がありませんでした。' : '目標を決定したときの記録がないため、習慣の目標は出せません。') + '</div>') + '</div>';
+  const sN = F.subs.reduce((a, s) => a + Math.min(s.n, s.t), 0), sT = F.subs.reduce((a, s) => a + s.t, 0);
+  h += rdet('sub', 'サブクエスト(習慣目標)', F.subs.length ? sumN(sN, sT, '回') : '<small>—</small>', F.subs.length ? pctOf(sN, sT) : null,
+    F.subs.length ? '<div class="cmp evc">' + headH('習慣', '達成 / 目標', '') + F.subs.map(s => rowH(s.n, s.t, s.u === '日' || s.u === '回' ? s.u : '回(目標' + s.u + ')', { name: s.name })).join('') + '</div>' : '<div class="note">' + (F.hasSnap ? '習慣の目標がありませんでした。' : '目標を決定したときの記録がないため、習慣の目標は出せません。') + '</div>');
   // 3) 成果目標
-  h += '<div class="rsec"><span class="lbl">成果目標<small>　' + F.outs.filter(o => o.done).length + ' / ' + F.outs.length + ' 達成</small></span>' +
-    (F.outs.length ? '<div class="cmp evc">' + F.outs.map(o => '<div class="evr x3"><span class="cn">' + esc(o.t) + '</span><span class="num ' + (o.done ? 'ok' : '') + '">' + (o.n != null ? (o.v || 0) + ' / ' + o.n + (o.u || '') : (o.done ? '達成' : '未達成')) + '</span><span class="' + (o.done ? 'ok' : '') + '">' + (o.done ? '達成' : '') + '</span></div>').join('') + '</div>' : '<div class="note">成果目標の記録がありません(次の' + (gk === 'week' ? '週' : '月') + 'を始めるときに残ります)。</div>') + '</div>';
+  const oD = F.outs.filter(o => o.done).length;
+  h += rdet('out', '成果目標', F.outs.length ? sumN(oD, F.outs.length, '達成') : '<small>—</small>', F.outs.length ? pctOf(oD, F.outs.length) : null,
+    F.outs.length ? '<div class="cmp evc">' + F.outs.map(o => '<div class="evr x3"><span class="cn">' + esc(o.t) + '</span><span class="num ' + (o.done ? 'ok' : '') + '">' + (o.n != null ? (o.v || 0) + ' / ' + o.n + (o.u || '') : (o.done ? '達成' : '未達成')) + '</span><span class="' + (o.done ? 'ok' : '') + '">' + (o.done ? '達成' : '') + '</span></div>').join('') + '</div>' : '<div class="note">成果目標の記録がありません(次の' + (gk === 'week' ? '週' : '月') + 'を始めるときに残ります)。</div>');
   // 4) イベントクエスト
-  h += '<div class="rsec"><span class="lbl">イベントクエスト</span><div class="cmp evc">' + headH('イベント', '達成 / 全部', '') + F.evs.map(e => rowH(e.n, e.t, '件', { name: e.name })).join('') + '</div></div>';
+  const eN = F.evs.reduce((a, x) => a + x.n, 0), eT = F.evs.reduce((a, x) => a + x.t, 0);
+  h += rdet('ev', 'イベントクエスト', sumN(eN, eT, '件'), pctOf(eN, eT), '<div class="cmp evc">' + headH('イベント', '達成 / 全部', '') + F.evs.map(e => rowH(e.n, e.t, '件', { name: e.name })).join('') + '</div>');
   // 5) 緊急クエスト(おまけ枠)
-  const urN = F.urs.reduce((a, x) => a + x.n, 0);
-  h += '<div class="rsec"><span class="lbl lbe">緊急クエスト' + infoBtn('urgent') + '</span><div class="cmp evc">' + headH('週', 'やった数', '') +
-    F.urs.map(u => '<div class="evr x3"><span class="cn">' + esc(u.name) + '</span><span class="num' + (u.n ? ' ok' : '') + '">' + u.n + ' / ' + u.t + ' 件</span><span>' + (u.n ? '✨' : '') + '</span></div>').join('') + '</div>' +
-    (urN ? '<div class="note" style="color:var(--accent);font-weight:700">' + urN + '件も追加でこなしました。すごい！</div>' : '') + '</div>';
-  return h;
+  const urN = F.urs.reduce((a, x) => a + x.n, 0), urT = F.urs.reduce((a, x) => a + x.t, 0);
+  h += rdet('ur', '緊急クエスト<span class="rdh">おまけ</span>', '<b class="num">' + urN + '</b> <small>件こなした(出た数 ' + urT + ')</small>' + (urN ? ' ✨' : ''), null,
+    '<div class="cmp evc">' + headH('週', 'やった数', '') + F.urs.map(u => '<div class="evr x3"><span class="cn">' + esc(u.name) + '</span><span class="num' + (u.n ? ' ok' : '') + '">' + u.n + ' / ' + u.t + ' 件</span><span>' + (u.n ? '✨' : '') + '</span></div>').join('') + '</div>' +
+    (urN ? '<div class="note" style="color:var(--accent);font-weight:700">' + urN + '件も追加でこなしました。すごい！</div>' : '') + '<div class="note">やらなくてよい追加枠です。できたらすごい！</div>');
+  return '<div class="rdl">' + h + '</div>';
 }
 // AIに渡す、実績のまとめ
 function reflFactsText(gk, g, label) {

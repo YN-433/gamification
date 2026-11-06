@@ -1,6 +1,8 @@
 /* ---- メインクエストのカレンダー: 24時間・ズーム・左右(時間)スクロール・上下は週ごとにスクロール。月表示にも切り替え ---- */
 const TL0 = DAY_START, TLS = DAY_END - DAY_START;
-const ZOOMS = [14, 22, 34, 52]; // 1時間の幅(px)
+const ZOOMS = [14, 22, 34, 52]; // 1時間の幅(px)の初期値(ボタン用)
+const ZMIN = 12, ZMAX = 170;
+const zpx = () => ui.zpx || ZOOMS[ui.zoom];
 const RH = 32; // 1日の行の高さ
 const dayEvents = d => state.events.filter(e => e.date === d).sort((a, b) => a.start - b.start);
 const primaryStat = e => STAT_IDS.slice().sort((a, b) => (e.alloc[b] || 0) - (e.alloc[a] || 0))[0];
@@ -26,8 +28,8 @@ function dayRow(d) {
 }
 // weeks: 表示する週(日曜の日付)の配列。id: スクロール位置を覚えるための名前
 function timeline(weeks, id) {
-  const z = ZOOMS[ui.zoom]; const step = z >= 52 ? 1 : z >= 34 ? 2 : z >= 22 ? 3 : 6;
-  const hours = []; for (let h = 0; h < 24; h += step) hours.push('<span style="left:' + pctX(h * 60) + '%">' + h + '</span>');
+  const z = zpx(); const stepM = z >= 100 ? 30 : z >= 52 ? 60 : z >= 34 ? 120 : z >= 22 ? 180 : 360;
+  const hours = []; for (let m = 0; m < 1440; m += stepM) hours.push('<span style="left:' + pctX(m) + '%">' + (m % 60 ? Math.floor(m / 60) + ':30' : m / 60) + '</span>');
   const blocks = weeks.map(wk => '<div class="tlweek" data-wk="' + wk + '"><div class="tlwl"><span>' + md2(wk) + '〜' + md2(addDays(wk, 6)) + '</span></div>' +
     [0, 1, 2, 3, 4, 5, 6].map(i => dayRow(addDays(wk, i))).join('') + '</div>').join('');
   return '<div class="calscroll' + (weeks.length > 1 ? ' multi' : '') + '" data-cal="' + id + '" style="--hp:' + z + 'px;--tw:' + (z * 24) + 'px">' +
@@ -35,12 +37,12 @@ function timeline(weeks, id) {
 }
 // スクロール位置を、描き直しのあとも保つ
 function calSave() {
-  document.querySelectorAll('.calscroll[data-cal]').forEach(el => { ui.calPos[el.dataset.cal] = { x: el.scrollLeft, y: el.scrollTop, z: ui.zoom }; });
+  document.querySelectorAll('.calscroll[data-cal]').forEach(el => { ui.calPos[el.dataset.cal] = { x: el.scrollLeft, y: el.scrollTop, z: zpx() }; });
 }
 function calRestore() {
   document.querySelectorAll('.calscroll[data-cal]').forEach(el => {
-    const p = ui.calPos[el.dataset.cal]; const z = ZOOMS[ui.zoom];
-    if (p && p.x != null) el.scrollLeft = p.z === ui.zoom ? p.x : (p.x + el.clientWidth / 2) / ZOOMS[p.z] * z - el.clientWidth / 2;
+    const p = ui.calPos[el.dataset.cal]; const z = zpx();
+    if (p && p.x != null) el.scrollLeft = p.z === z ? p.x : (p.x + el.clientWidth / 2) / p.z * z - el.clientWidth / 2;
     else el.scrollLeft = 7 * z;
     const blk = el.querySelector('.tlweek[data-wk="' + (el.dataset.cal === 'goal' ? state.goals.week.start : ui.wk) + '"]');
     if (p && p.y != null && !ui.calJump) el.scrollTop = p.y; else if (blk) el.scrollTop = blk.offsetTop - el.querySelector('.tlhours').offsetHeight;
@@ -107,7 +109,7 @@ function mainQuestSection(title) {
         '<div class="tlfoot">' + infoBtn('cal') + gcalBtn() + '</div>'
       : '<div class="wknav"><button class="btn sm" data-action="wkprev" aria-label="前の週">‹</button><button class="btn sm wklabel" data-action="wktoday">' + wkLabel() + '</button><button class="btn sm" data-action="wknext" aria-label="次の週">›</button>' + questTray() + '</div>' +
         timeline(calWeeks(), 'main') +
-        '<div class="tlfoot"><span class="zoom"><button class="btn sm" data-action="zoom" data-d="-1" aria-label="ズームアウト"' + (ui.zoom ? '' : ' disabled') + '>−</button><button class="btn sm" data-action="zoom" data-d="1" aria-label="ズームイン"' + (ui.zoom < ZOOMS.length - 1 ? '' : ' disabled') + '>＋</button></span>' + infoBtn('cal') + gcalBtn() + '</div>' +
+        '<div class="tlfoot"><span class="zoom"><button class="btn sm" data-action="zoom" data-d="-1" aria-label="横にズームアウト"' + (zpx() > ZMIN + 0.5 ? '' : ' disabled') + '>−</button><button class="btn sm" data-action="zoom" data-d="1" aria-label="横にズームイン"' + (zpx() < ZMAX - 0.5 ? '' : ' disabled') + '>＋</button></span>' + infoBtn('cal') + gcalBtn() + '</div>' +
         '') +
     outcomeCheck() +
         (gc && gc.msg ? '<div class="note" role="status">' + esc(gc.msg) + '</div>' : '') + (gc && gc.err ? '<div class="note warn" role="alert">' + esc(gc.err) + '</div>' : '') + '</section>';
@@ -123,7 +125,9 @@ function popHTML() {
     const stats = STAT_IDS.filter(k => e.alloc[k]).map(k => '<span class="tg" style="--c:' + lc(k) + '">' + k + ' ' + Math.round(e.alloc[k] * 20) + 'pt</span>').join('');
     const future = e.date > state.day;
     let act = '';
-    if (!e.done) {
+    if (!p.rep) {
+      act = e.done ? '<div class="note"><b>達成済み ★' + e.star + '</b>(報告は「クエスト受付」で行います)</div>' : '<div class="note">達成の報告は「クエスト受付」で行います。ここでは、予定の内容を保存します。</div>';
+    } else if (!e.done) {
       act = future ? '<div class="note">当日になると達成報告できます。</div>'
         : '<div class="field"><span class="lbl">達成報告 · 集中度の評価</span><div class="stars" role="group" aria-label="評価">' + [1, 2, 3, 4, 5].map(v => '<button class="star' + (v <= (p.star || 3) ? ' on' : '') + '" data-action="pstar" data-v="' + v + '" aria-label="★' + v + '">★</button>').join('') + '</div>' +
           '<div class="note">★1 ×0.8 · ★3 ×1.2 · ★5 ×2.0(ゾーン)。獲得は「今日を終了」で確定します。</div>' +
@@ -133,10 +137,13 @@ function popHTML() {
         (e.fin ? '' : '<button class="btn" data-action="undoev" data-id="' + e.id + '">達成を取り消す</button>');
     }
     body = '<h3>' + esc(evName(e)) + '</h3><div class="tagrow">' + stats + (e.tag ? '<span class="tg">#' + esc(e.tag) + '</span>' : '') + '</div>' +
-      (e.memo ? '<div class="note">' + esc(e.memo) + '</div>' : '') +
+      '<label class="field"><span class="lbl lbe">メモ' + infoBtn('evmemo') + '</span><textarea class="in memo" rows="3" maxlength="500" data-chg="evmemo" data-id="' + e.id + '" placeholder="このクエストのメモ(Googleカレンダーの説明に入ります)">' + esc(e.memo || '') + '</textarea></label>' +
       '<div class="dates"><label class="field"><span class="lbl">日付</span><input class="in" type="date" value="' + e.date + '" data-chg="evmove" data-k="date" data-id="' + e.id + '"' + (e.done ? ' disabled' : '') + '></label>' +
       '<label class="field"><span class="lbl">開始(' + e.boxes * 2 + '時間)</span><input class="in" type="time" step="1800" value="' + fmtT(e.start) + '" data-chg="evmove" data-k="time" data-id="' + e.id + '"' + (e.done ? ' disabled' : '') + '></label></div>' +
-      act + (e.fin ? '' : '<button class="btn danger" data-action="delev" data-id="' + e.id + '">' + (p.del ? 'もう一度押すと削除' : 'この予定を削除') + '</button>');
+      (p.rep ? '' : '<button class="btn primary block" data-action="evsave" data-id="' + e.id + '">保存</button>') + act + (e.fin || p.rep ? '' : '<button class="btn danger" data-action="delev" data-id="' + e.id + '">' + (p.del ? 'もう一度押すと削除' : 'この予定を削除') + '</button>');
+  } else if (p.k === 'chara') {
+    const cur = state.pet || 'whale';
+    body = '<h3>キャラをえらぶ</h3><div class="chgrid">' + Object.keys(PETS).map(k => '<button class="chb' + (cur === k ? ' on' : '') + '" data-action="petset" data-v="' + k + '" aria-pressed="' + (cur === k) + '"><span class="chi">' + petSVG(64, '', k) + '</span><b>' + PETS[k].name + '</b></button>').join('') + '</div><button class="btn block" data-action="popclose">とじる</button>';
   } else if (p.k === 'add') {
     const areas = goalAreas();
     body = '<h3>メインクエストを追加</h3>' +
@@ -198,7 +205,7 @@ function gcalBody(e) {
   return {
     summary: (e.done ? '✓ ' : '') + '【' + evName(e) + '】' + STAT_IDS.filter(k => e.alloc[k]).map(k => k + Math.round(e.alloc[k] * 20)).join(' '),
     startTime: e.date + 'T' + fmtT(e.start) + ':00', endTime: endD + 'T' + fmtT(end % 1440) + ':00',
-    description: 'ゲーミフィケーションのメインクエスト(' + e.boxes + 'BOX)' + (e.tag ? '\nタグ: ' + e.tag : '') + (e.memo ? '\n' + e.memo : '')
+    description: (e.memo ? e.memo + '\n\n' : '') + 'ゲーミフィケーション ' + e.boxes + 'BOX' + (e.tag ? '／タグ: ' + e.tag : '')
   };
 }
 async function gcalSync() {
@@ -228,3 +235,30 @@ async function gcalSync() {
   }
   save(); render();
 }
+
+/* ---- 2本指のピンチで、カレンダーを横方向だけ拡大・縮小(アプリ全体は拡大しない) ---- */
+(function () {
+  let pin = null; const LEFT = 44; // 日付の列(40px)+すきま(4px)
+  const dx = ts => Math.abs(ts[0].clientX - ts[1].clientX);
+  document.addEventListener('touchstart', e => {
+    if (e.touches.length !== 2) return;
+    const el = e.target.closest && e.target.closest('.calscroll'); if (!el) return;
+    const r = el.getBoundingClientRect(); const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+    pin = { el: el, d0: Math.max(dx(e.touches), 40), z0: zpx(), cx: cx, sx: el.scrollLeft };
+  }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!pin || e.touches.length !== 2) return;
+    e.preventDefault();
+    const z = clampN(pin.z0 * Math.max(dx(e.touches), 40) / pin.d0, ZMIN, ZMAX);
+    const hoursAtFocal = (pin.sx + pin.cx - LEFT) / pin.z0;
+    document.querySelectorAll('.calscroll').forEach(c => { c.style.setProperty('--hp', z + 'px'); c.style.setProperty('--tw', (z * 24) + 'px'); });
+    pin.el.scrollLeft = Math.max(0, hoursAtFocal * z + LEFT - pin.cx); ui.zpx = z;
+  }, { passive: false });
+  const end = e => { if (pin && e.touches.length < 2) { pin = null; calSave(); render(); } };
+  document.addEventListener('touchend', end, { passive: true }); document.addEventListener('touchcancel', end, { passive: true });
+  // PCでは Ctrl+ホイールで同じように
+  document.addEventListener('wheel', e => {
+    const el = e.target.closest && e.target.closest('.calscroll'); if (!el || !e.ctrlKey) return;
+    e.preventDefault(); calSave(); ui.zpx = clampN(zpx() * (e.deltaY < 0 ? 1.12 : 1 / 1.12), ZMIN, ZMAX); render();
+  }, { passive: false });
+})();

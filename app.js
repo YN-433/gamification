@@ -36,7 +36,7 @@ function render() {
   document.getElementById('head').innerHTML =
     '<div class="hd tier-' + tier + '">' +
       '<div class="hl"><button class="mbtn" data-action="menu" aria-expanded="' + ui.menu + '" aria-label="メニュー">' + ic('<path d="M4 7h16M4 12h16M4 17h16"/>') + '</button>' +
-      '<button class="ava" data-action="tab" data-tab="home" aria-label="ホームへ">' + petSVG(36) + '</button></div>' +
+      '<button class="ava" data-action="pop" data-k="chara" aria-label="キャラを変える">' + petSVG(36) + '</button></div>' +
       '<button class="rbub' + (ui.advPop ? ' pop' : '') + '" data-action="advice" aria-live="polite">' + esc(ui.adv || (ui.adv = pickAdvice())) + '</button>' +
       '<div class="hcenter">' + awardSVG(r.label) +
         '<div class="hside"><span class="num hpt"><b>' + fmt(total) + '</b> pt</span>' + barHTML(pct, 'var(--tier)') + '<small>' + (r.next ? '次のランクまで<br><b class="num">' + fmt(r.next[1] - total) + '</b> pt' : '最高ランク') + '</small></div></div>' +
@@ -120,5 +120,8 @@ function viewSettings() {
     '<button class="btn" data-action="bkimport">ファイルから読み込む</button></div>' +
     '<input type="file" id="bkfile" accept=".json,application/json" hidden>' +
     (ui.bkArm ? '<div class="note warn">「' + esc(ui.bkArm.name) + '」(' + esc(ui.bkArm.when) + ' 保存分)で、いまの記録をすべて置き換えます。よければもう一度押してください。</div><div class="bkrow"><button class="btn danger" data-action="bkgo">置き換える</button><button class="btn" data-action="bkcancel">やめる</button></div>' : '') +
+    '<div class="note" style="margin-top:6px"><b>表にして書き出す</b>(見るためのもので、読み込みはできません)</div>' +
+    '<div class="bkrow"><button class="btn" data-action="dxlsx">Excel(.xlsx)</button><button class="btn" data-action="dcsv">CSV(zip)</button><button class="btn" data-action="dmd">Markdown</button></div>' +
+    '<div class="note">Excel・Googleスプレッドシートは.xlsx、Notionは「CSV」を取り込み、Obsidianは「Markdown」をVaultに入れると読めます。</div>' +
     '<small>最後に保存したバックアップ: ' + (state.lastBackup ? esc(state.lastBackup) : 'まだありません') + '</small></div></section></div>';
 }

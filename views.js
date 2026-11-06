@@ -25,7 +25,7 @@ function viewQuest() {
     const today = dayEvents(state.day);
     const over = state.events.filter(e => !e.done && e.date < state.day && e.date >= addDays(state.day, -7)).sort((a, b) => a.date < b.date ? -1 : 1);
     const row = e => '<div class="rep"><div><b>' + esc(evName(e)) + '</b><small>' + md2(e.date) + ' ' + fmtT(e.start) + '〜' + fmtT(Math.min(evEnd(e), DAY_END)) + ' · ' + STAT_IDS.filter(k => e.alloc[k]).map(k => k + ' ' + Math.round(e.alloc[k] * 20)).join(' ') + '</small></div>' +
-      (e.done ? '<span class="pill">★' + e.star + (e.fin ? ' 確定' : ' 報告済み') + '</span>' : '<button class="btn sm primary" data-action="pop" data-k="ev" data-id="' + e.id + '">報告する</button>') + '</div>';
+      (e.done ? '<span class="pill">★' + e.star + (e.fin ? ' 確定' : ' 報告済み') + '</span>' : '<button class="btn sm primary" data-action="pop" data-k="ev" data-rep="1" data-id="' + e.id + '">報告する</button>') + '</div>';
     body = '<section class="sec"><h2 class="sh">今日のメインクエスト<small>' + md2(state.day) + '</small></h2>' + (today.length ? today.map(row).join('') : '<div class="note">今日のメインクエストはありません。</div>') + '</section>' +
       (over.length ? qdet('over', '報告がまだの予定', '過去7日 · ' + over.length + '件', over.map(row).join('')) : '') +
       acceptLists(state.day);

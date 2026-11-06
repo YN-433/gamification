@@ -53,8 +53,11 @@ const MIC_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" str
 const micBtn = () => '<button type="button" class="micb" data-action="micf" aria-label="話して入力">' + MIC_SVG + '</button>';
 const GRIP_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 const INFO = {
-  stats: ['5つのステータス', '魅力(CHA)：身だしなみ・人づきあい・美意識など、人に向けた行動。\n免疫(IMM)：食事・睡眠・運動・休養など、からだを整える行動。\n体力(STR)：運動・筋トレ・外出など、からだを動かす行動。\n規律(REG)：片づけ・習慣・仕事や家事の継続など、決めたことを守る行動。\n知性(INT)：学習・読書・制作・企画など、頭を使う行動。\n\nどれに入るかは、クエスト・成果目標・習慣を作るときの「ステータスの配分」で決まります。1BOX(2時間)こなすと、その配分でPtが入ります(★で×0.8〜2.0)。成果目標は達成したとき、習慣はこなしたときに入ります。確定は「今日を終了」で行われます。'],
+  stats: ['5つのステータス', '魅力(CHA)：外見や見た目を磨く行動。筋トレで体を作る、メイク、美容、身だしなみ、人づきあいなど。\n健康(HLT)：からだと健康に関わる行動。運動やスポーツ(サッカーなど)、食事、睡眠、休養など。\n規律(REG)：片づけ・習慣・仕事や家事の継続など、決めたことを守る行動。\n知性(INT)：頭を使う行動。学習・読書・企画のほか、サッカーの戦術理解(サッカーIQ)のような「分かる力」も。\n技術(TEC)：できることが増える行動。サッカーのプレー、楽器、制作、プログラミングなど、技能の上達。\n\n1つの予定を、いくつかに分けて入れられます。たとえばサッカーに行ったら、健康+技術+知性、のように。どれに入るかは、クエスト・成果目標・習慣を作るときの「ステータスの配分」で決まります。1BOX(2時間)こなすと、その配分でPtが入ります(★で×0.8〜2.0)。成果目標は達成したとき、習慣はこなしたときに入ります。確定は「今日を終了」で行われます。'],
   backup: ['データのバックアップ', '「ファイルに保存」で、いまの記録を1つのファイル(.json)にして、端末に保存します。「ファイルから読み込む」で、そのファイルから記録を戻せます(いまの記録は置き換わります)。\n\n機種変更・ブラウザのデータ削除・アプリの入れ直しの前に、保存しておくと安心です。ファイルにはあなたの記録がそのまま入っているので、人に渡さないでください。'],
+  hskill: ['スキル', 'SPは、ランクが上がったり、ステータスが一定のPtに達したりすると増えます。右上の＋から、スキルにSPを割り振ります。Lv.6以上は金スキルになります。スキルをタップすると、効果が見られます。'],
+  htkt: ['チケット', 'ショップで買ったご褒美の券が、ここに入ります。券をタップして使う枚数を決めると、使えます。実物を買って、ご褒美を受け取ったときに使ってください。券によって、MPが回復したり、ステータスが付いたりします。'],
+  evmemo: ['メモ', 'このクエストの予定に、メモを残せます。「Googleカレンダーに反映」を押すと、Googleカレンダーの予定の「説明」に入ります(すでに反映した予定は、もう一度押すと説明が更新されます)。'],
   cal: ['カレンダーの使い方', '左右で時間、上下で週を動かします。予定を長押ししてドラッグすると動かせます。タップすると、報告・★評価・削除ができます。月表示では、日付を押すとその週の時間表示に移り、クエストを日付に落とすと空いている時間に入ります。'],
   tray: ['クエストを置く', 'クエストを長押ししてカレンダーにドラッグします(1回で1BOX)。置いた数が、各クエストの予定BOXに自動で入ります。メインクエストで時間の変更・報告・評価ができます。'],
   qlist: ['クエストの並べ替え・削除', '上から優先順です(1,2,3…。常駐クエストは「-」)。見出しを長押しして並べ替え、ゴミ箱へドラッグで消せます。ゴミ箱を押すと×が出ます。'],
@@ -181,15 +184,35 @@ function viewGoals() {
 
 const goalSeg2 = () => '<div class="seg seg2" role="group" aria-label="目標と省察">' + [['goal', '目標'], ['refl', '省察']].map(x => '<button data-action="gv" data-v="' + x[0] + '" aria-pressed="' + ((ui.gv || 'goal') === x[0]) + '">' + x[1] + '</button>').join('') + '</div>';
 const goalSeg = () => '<div class="seg" role="group" aria-label="期間">' + [['week', '今週'], ['month', '今月'], ['year', '今年']].map(x => '<button data-action="gk" data-v="' + x[0] + '" aria-pressed="' + (ui.gk === x[0]) + '">' + x[1] + '</button>').join('') + '</div>';
+// 今年の目標のタグ(複数)・説明
+const tagParse = s => { const r = []; String(s || '').split(/[,、，\s]+/).forEach(t => { t = t.replace(/^#/, '').trim().slice(0, 12); if (t && r.indexOf(t) < 0) r.push(t); }); return r.slice(0, 8); };
+const oTags = o => Array.isArray(o.tags) ? o.tags : (o.tag ? [o.tag] : []);
+const yTags = () => { const s = []; state.goals.year.items.forEach(o => oTags(o).forEach(t => { if (s.indexOf(t) < 0) s.push(t); })); return s; };
+const tagChip = (k, t) => '<span class="tgx">#' + esc(t) + '<button type="button" data-action="tagrm" data-k="' + esc(k) + '" data-t="' + esc(t) + '" aria-label="タグ ' + esc(t) + ' を外す">×</button></span>';
+const tagIn = (k, tags, ph) => '<div class="tagin" data-tk="' + esc(k) + '">' + tags.map(t => tagChip(k, t)).join('') + '<input class="tgi" type="text" list="ytaglist" enterkeyhint="done" data-tin="' + esc(k) + '" maxlength="12" placeholder="' + (tags.length ? '' : ph) + '" aria-label="タグを入力(Enterで確定)"></div>';
+const yTagOpts = () => '<datalist id="ytaglist">' + yTags().map(t => '<option value="' + esc(t) + '">').join('') + '</datalist>';
+const yFilt = () => (ui.yTags || []).filter(t => t === '__none' || yTags().indexOf(t) >= 0);
+// フィルタ: ボタン(ヘッダー用)と、タグを選ぶパネル。複数選ぶと、どれかに当てはまるものを出す
+const yFilterBtn = () => { const n = yFilt().length; return '<button class="btn sm yfb' + (n ? ' on' : '') + '" data-action="yfo" aria-expanded="' + !!ui.yfo + '">タグ' + (n ? ' ' + n : '') + ' ▾</button>'; };
+const yFilterPanel = (always) => { if (!yTags().length || !(always || ui.yfo)) return ''; const cur = yFilt();
+  const chip = (v, t) => '<button class="tgc' + (cur.indexOf(v) >= 0 ? ' on' : '') + '" data-action="ytagtog" data-v="' + esc(v) + '" aria-pressed="' + (cur.indexOf(v) >= 0) + '">' + t + '</button>';
+  return '<div class="tgp">' + '<button class="tgc' + (cur.length ? '' : ' on') + '" data-action="ytagtog" data-v="">すべて</button>' + yTags().map(t => chip(t, '#' + esc(t))).join('') + (state.goals.year.items.some(o => !oTags(o).length) ? chip('__none', 'タグなし') : '') + '</div>'; };
+const yShown = () => { const f = yFilt(); return state.goals.year.items.map((o, i) => ({ o: o, i: i })).filter(x => !f.length || f.some(t => t === '__none' ? !oTags(x.o).length : oTags(x.o).indexOf(t) >= 0)); };
+// タップで開く、タグと説明
+const yDet = (o, i) => ui.yo && ui.yo[i] ? '<div class="ydet">' + (oTags(o).length ? '<div class="ytgs">' + oTags(o).map(t => '<span class="ytg">#' + esc(t) + '</span>').join('') + '</div>' : '') + (o.d ? '<div class="yd">' + esc(o.d) + '</div>' : '') + (!oTags(o).length && !o.d ? '<div class="yd muted">タグ・説明はありません。✎で追加できます。</div>' : '') + '</div>' : '';
 function viewYear() {
-  const y = state.goals.year; const d = y.items.filter(x => x.done).length;
-  const rows = y.items.map((o, i) => '<div class="ocrow' + (o.done ? ' done' : '') + '"><button class="tick" data-action="ytick" data-i="' + i + '" aria-label="達成にする" aria-pressed="' + o.done + '"><span class="check">' + (o.done ? '✓' : '') + '</span></button>' +
-    '<input class="in" type="text" aria-label="今年の目標" value="' + esc(o.t) + '" data-y="' + i + '"><button class="xbtn" data-action="ydel" data-i="' + i + '" aria-label="この目標を消す">×</button></div>').join('');
+  const y = state.goals.year; const d = y.items.filter(x => x.done).length; const ed = !!(ui.ge && ui.ge.y);
   if (ui.gv === 'refl') return '<div class="stack">' + goalSeg() + goalSeg2() + reflSection('year', y) + '</div>';
+  const sh = yShown();
+  const rows = sh.map(x => { const o = x.o, i = x.i;
+    return ed
+      ? '<div class="yitem"><div class="yrow ed"><div class="yin"><input class="in" type="text" aria-label="今年の目標" value="' + esc(o.t) + '" data-y="' + i + '">' + tagIn(i, oTags(o), 'タグを入力して Enter') + '<textarea class="in ytx" rows="2" aria-label="説明" placeholder="説明" data-yd="' + i + '">' + esc(o.d || '') + '</textarea></div><button class="xbtn" data-action="ydel" data-i="' + i + '" aria-label="この目標を消す">×</button></div></div>'
+      : '<div class="yitem"><div class="yrow' + (o.done ? ' done' : '') + '"><button class="yt ytb" data-action="yopen" data-i="' + i + '" aria-expanded="' + !!(ui.yo && ui.yo[i]) + '">' + esc(o.t) + '</button>' + (o.done ? '<span class="ydn">達成</span>' : '') + '</div>' + yDet(o, i) + '</div>'; }).join('');
   return '<div class="stack">' + goalSeg() + goalSeg2() +
-    '<section class="sec"><h2 class="sh">' + y.year + '年の目標<small>' + d + ' / ' + y.items.length + ' 達成</small></h2>' + barHTML(y.items.length ? d / y.items.length * 100 : 0, 'var(--accent)') +
-    '<div class="form" style="margin-top:10px">' + (rows || '<div class="note">まだ今年の目標がありません。いくつでも作れます。ホームの「今年」の達成度はこの数から出します。</div>') +
-    '<div class="arow2"><input class="in" type="text" data-ui="newYear" value="' + esc(ui.newYear) + '" placeholder="例：転職を決める"><button class="btn primary" data-action="yadd">追加</button></div></div></section></div>';
+    '<section class="sec"><h2 class="sh"><span class="shl">' + y.year + '年の目標<small>' + d + ' / ' + y.items.length + ' 達成</small></span><span class="shr">' + (yTags().length ? yFilterBtn() : '') + editBtn('y') + '</span></h2>' + yFilterPanel() + barHTML(y.items.length ? d / y.items.length * 100 : 0, 'var(--accent)') +
+    '<div class="form" style="margin-top:10px">' + yTagOpts() + (rows || '<div class="note">' + (y.items.length ? 'このタグの目標はありません。' : 'まだ今年の目標がありません。いくつでも作れます。ホームの「今年」の達成度はこの数から出します。') + '</div>') +
+    '<div class="yadd"><input class="in" type="text" data-ui="newYear" value="' + esc(ui.newYear) + '" placeholder="例：転職を決める">' + tagIn('new', ui.newYearTags || [], 'タグを入力して Enter') + '<textarea class="in ytx" rows="2" data-ui="newYearD" placeholder="説明(あれば)">' + esc(ui.newYearD || '') + '</textarea><button class="btn primary" data-action="yadd">追加</button></div>' +
+    '<small>項目をタップすると、タグと説明が出ます。達成のチェックは「省察」でつけます。直す・消すときは右上の✎を押します。</small></div></section></div>';
 }
 
 // 目標時(決定したとき)と省察時の比較

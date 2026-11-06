@@ -8,8 +8,8 @@ const CFG = {
   STAR: { 1: 0.8, 2: 1.0, 3: 1.2, 4: 1.5, 5: 2.0 }
 };
 const STATS = [
-  { id: 'CHA', name: '魅力' }, { id: 'IMM', name: '免疫' }, { id: 'STR', name: '体力' },
-  { id: 'REG', name: '規律' }, { id: 'INT', name: '知性' }
+  { id: 'CHA', name: '魅力' }, { id: 'HLT', name: '健康' }, { id: 'REG', name: '規律' },
+  { id: 'INT', name: '知性' }, { id: 'TEC', name: '技術' }
 ];
 const RANKS = (function () {
   const r = [['G',0],['G+',300],['F',600],['F+',1000],['E',1500],['E+',2000],['D',2600],['D+',3200],['C',3800],['C+',4400],['B',5000],['B+',5500],['A',6000],['A+',7500],['S',9000],['S+',9800],['SS',10600],['SS+',11300],['SSS',12000]];
@@ -41,13 +41,13 @@ const SKILLS = [
   { id: 'zone',  name: 'ゾーン突入',        cat: '評価特化', max: '★4・5の倍率 +1.5',   eff: lv => '★4・5の倍率 +' + (0.15 * lv).toFixed(2) },
   { id: 'arch',  name: '建築家の眼',        cat: 'INT特化',  max: 'INT獲得Pt +150%',    eff: lv => 'INT獲得Pt +' + (15 * lv) + '%' },
   { id: 'beau',  name: '美意識の目覚め',    cat: 'CHA特化',  max: 'CHA獲得Pt +150%',    eff: lv => 'CHA獲得Pt +' + (15 * lv) + '%' },
-  { id: 'camp',  name: 'ソロキャンパー',    cat: 'IMM特化',  max: 'IMM獲得Pt +150%',    eff: lv => 'IMM獲得Pt +' + (15 * lv) + '%' }
+  { id: 'camp',  name: 'ソロキャンパー',    cat: 'HLT特化',  max: 'HLT獲得Pt +150%',    eff: lv => 'HLT獲得Pt +' + (15 * lv) + '%' }
 ];
-const CATSKILL = { INT: 'arch', CHA: 'beau', IMM: 'camp' };
+const CATSKILL = { INT: 'arch', CHA: 'beau', HLT: 'camp' };
 const QUESTS = [
   { id: 'q1', cat: 'CHA', name: '丁寧なスキンケア＆UV対策', kind: 'デイリー', xp: 10, g: 10 },
-  { id: 'q2', cat: 'IMM', name: '7時間以上の質の高い睡眠', kind: 'デイリー', xp: 20, g: 20 },
-  { id: 'q3', cat: 'STR', name: 'ストレッチまたは15分運動', kind: 'デイリー', xp: 15, g: 15 },
+  { id: 'q2', cat: 'HLT', name: '7時間以上の質の高い睡眠', kind: 'デイリー', xp: 20, g: 20 },
+  { id: 'q3', cat: 'HLT', name: 'ストレッチまたは15分運動', kind: 'デイリー', xp: 15, g: 15 },
   { id: 'q4', cat: 'INT', name: '30分間の集中学習', kind: 'デイリー', xp: 20, g: 20 },
   { id: 'q5', cat: 'REG', name: '朝7:00までに起床', kind: 'デイリー', xp: 10, g: 10 },
   { id: 'q6', cat: 'INT', name: '建築・美術館などの文化見学', kind: 'ウィークリー', xp: 100, g: 100 },
@@ -61,7 +61,7 @@ const SHOP = [
   { id: 't4', cat: 'スイーツ', name: 'スイーツ購入券 (500円)', g: 500, mp: 20, pts: {} },
   { id: 't5', cat: '書籍', name: '新刊購入券 (1,000円)', g: 1000, mp: 10, pts: {} },
   { id: 't6', cat: '贈り物', name: '贈品購入券 (2,000円)', g: 2000, mp: 20, pts: {} },
-  { id: 's8', cat: '転生大報酬', name: '1周目 転生旅行チケット', g: 0, mp: 100, pts: { CHA: 100, IMM: 100, STR: 100, REG: 100, INT: 100 }, locked: true }
+  { id: 's8', cat: '転生大報酬', name: '1周目 転生旅行チケット', g: 0, mp: 100, pts: { CHA: 100, HLT: 100, REG: 100, INT: 100, TEC: 100 }, locked: true }
 ];
 const LEGACY = [
   { id: 's1', cat: 'ガジェット', name: 'ガジェット購入券 (2,000円)', g: 2000, mp: 30, pts: {}, legacy: true },
@@ -137,7 +137,7 @@ function gradOf(o, bar) {
 }
 /* 常駐クエスト: 毎週の目標に自動で入る(消せない) */
 const RESIDENT = [
-  { k: 'shop', name: '買出', dist: { REG: 10, IMM: 10 }, rec: 1, on: () => true },
+  { k: 'shop', name: '買出', dist: { REG: 10, HLT: 10 }, rec: 1, on: () => true },
   { k: 'wk', name: '1週間の予定', dist: { REG: 10, INT: 10 }, on: () => true },
   // 月末をふくむ週の、ひとつ前の週に出る
   { k: 'mo', name: '1か月の予定', dist: { REG: 8, INT: 12 }, on: g => { for (let i = 7; i <= 13; i++) { const d = addDays(g.start, i); if (addDays(d, 1).slice(8) === '01') return true; } return false; } },
@@ -171,7 +171,7 @@ function seedGoals(td) {
   return {
     week: {
       start: ws, end: addDays(ws, 6), perDay: 3,
-      areas: [mkArea('バイト', 3, { REG: 12, CHA: 8 }, { want: 'm', work: true }), mkArea('転職活動・引越', 6, { REG: 10, INT: 10 }, { work: true }), mkArea('ゲーミフィケーション', 10, { INT: 17, REG: 3 }), mkArea('サッカー観戦', 8, { CHA: 14, IMM: 6 })],
+      areas: [mkArea('バイト', 3, { REG: 12, CHA: 8 }, { want: 'm', work: true }), mkArea('転職活動・引越', 6, { REG: 10, INT: 10 }, { work: true }), mkArea('ゲーミフィケーション', 10, { INT: 17, REG: 3 }), mkArea('サッカー観戦', 8, { CHA: 10, HLT: 6, TEC: 4 })],
       outcomes: [{ t: '不動産を見に行く', done: false, locked: false, dist: mkDist({ REG: 12, INT: 8 }) }, { t: 'バイトに入る', done: false, locked: false, dist: mkDist({ REG: 20 }) }],
       habits: { morning: 2, night: 2, hiit: 2, reading: 1, lab: 1, meditation: 1 }
     },
@@ -231,7 +231,7 @@ function seedEvents() {
 function seedState(td) {
   return {
     v: 5, wkStart: 6, habHide: [], hab: [], habDist: {}, qlib: {}, day: td, pend: { pts: {}, gold: 0 }, closed: {}, journal: {}, widgets: ['qstat', 'gain', 'health', 'box'], gcalDel: [], cycle: 1,
-    pts: { CHA: 0, IMM: 0, STR: 0, REG: 0, INT: 104 },
+    pts: { CHA: 0, HLT: 0, REG: 0, INT: 104, TEC: 0 },
     gold: 78, mp: CFG.MP_FALLBACK, mpBase: CFG.MP_FALLBACK, morning: { src: 'fallback', score: null },
     sp: 0, spRank: 0, spStats: [], notices: [],
     today: { boxes: 0, steps: null, sleep: null, habits: 0, xp: 0, g: 0 },
