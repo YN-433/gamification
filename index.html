@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>ゲーミフィケーション</title>
+<meta name="theme-color" content="#0B8A5E">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ゲーム人生">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=DM+Mono:wght@400;500&family=DotGothic16&family=Klee+One:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="game.css">
+</head><body>
+<div class="app">
+  <header class="top" id="head"></header>
+  <main id="view"></main>
+</div>
+<div id="pop"></div>
+<nav class="tabbar" aria-label="メイン">
+  <div class="tabs">
+    <button class="tab" data-action="tab" data-tab="home"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4.6L2.8 20.4h18.4L12 4.6z"/><path d="M12 11.2l-3.3 9.2M12 11.2l3.3 9.2"/><path d="M16.1 11.6V5.4h3v10.8"/><path d="M17.6 3.6c1-.8-1-1.5 0-2.5"/><path d="M1.6 22.8l1.7-2.4M22.4 22.8l-1.7-2.4"/></svg><span>ホーム</span></button>
+    <button class="tab" data-action="tab" data-tab="quest"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7.6 7.6L16.4 16.4M16.4 7.6L7.6 16.4"/><path d="M5 2.6l2.4 2.4L5 7.4 2.6 5zM19 2.6l2.4 2.4L19 7.4 16.6 5zM5 16.6l2.4 2.4L5 21.4 2.6 19zM19 16.6l2.4 2.4L19 21.4 16.6 19z"/><path d="M12 1.6l1.3 4.1L12 9.6l-1.3-3.9zM12 22.4l1.3-4.1L12 14.4l-1.3 3.9zM1.6 12l4.1-1.3L9.6 12l-3.9 1.3zM22.4 12l-4.1-1.3L14.4 12l3.9 1.3z"/></svg><span>クエスト</span></button>
+    <button class="tab" data-action="tab" data-tab="record"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.8" cy="13.2" r="9"/><circle cx="10.8" cy="13.2" r="3"/><circle cx="20.6" cy="3.6" r="1.6"/><path d="M20 5.1l-2.2 6.4-4.2 1.7"/></svg><span>レコード</span></button>
+    <button class="tab" data-action="tab" data-tab="shop"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 8.6h14.4l-1.2 13H3.6l-1.2-13z"/><path d="M5.6 8.6V6a3.9 3.9 0 017.8 0v2.6"/><path d="M16.8 12h4.8l-1 9.6h-5"/></svg><span>ショップ</span></button>
+    <button class="tab" data-action="tab" data-tab="goals"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="10.4" cy="13.6" r="8.9"/><circle cx="10.4" cy="13.6" r="4.4"/><path d="M10.4 13.6L21 3"/><path d="M21 3l-.4-2M21 3l2 .4M18.8 5.2l-.4-2.4M18.8 5.2l2.4.4"/></svg><span>ゴール</span></button>
+  </div>
+</nav>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="pwa-shim.js"></script>
+<script src="logic.js"></script>
+<script src="quest.js"></script>
+<script src="core.js"></script>
+<script src="timeline.js"></script>
+<script src="plan.js"></script>
+<script src="views.js"></script>
+<script src="sync.js"></script>
+<script src="app.js"></script>
+<script src="drag.js"></script>
+<script src="pdf.js"></script>
+<script src="refl.js"></script>
+<script src="events.js"></script>
+<script>if ("serviceWorker" in navigator && /^https?:/.test(location.protocol)) window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });</script>
+</body></html>
