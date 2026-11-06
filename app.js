@@ -112,5 +112,12 @@ function viewSettings() {
   return '<div class="stack"><div><button class="btn sm" data-action="tab" data-tab="home">← ホームへ</button></div>' +
     '<section class="sec"><h2 class="sh">設定</h2><div class="form"><div class="field"><span class="lbl">画面の色</span><div class="seg" role="group" aria-label="画面の色">' + THEMES_UI.map(t => '<button data-action="theme" data-v="' + t[0] + '" aria-pressed="' + ((state.theme || 'default') === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><div class="field"><span class="lbl">1週間の始まり</span>' +
     '<div class="seg col" role="group" aria-label="1週間の始まり">' + opts.map(o => '<button data-action="wks" data-v="' + o[0] + '" aria-pressed="' + (WKS === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
-    '<div class="note">基本は土曜はじまり(土〜金)です。変えると、カレンダー・今週の目標・イベントクエストの週が、この曜日で区切られます。今週の目標の期間は、今日をふくむ週に合わせ直します。</div></div></div></section></div>';
+    '<div class="note">基本は土曜はじまり(土〜金)です。変えると、カレンダー・今週の目標・イベントクエストの週が、この曜日で区切られます。今週の目標の期間は、今日をふくむ週に合わせ直します。</div></div></div></section>' +
+    '<section class="sec"><h2 class="sh"><span class="shl">データのバックアップ' + infoBtn('backup') + '</span></h2><div class="form">' +
+    '<div class="note">いまの記録(クエスト・ステータス・ゴールド・目標・省察など)を、ファイルに保存できます。機種変更や、更新・初期化の前に取っておくと安心です。</div>' +
+    '<div class="bkrow"><button class="btn primary" data-action="bkexport">ファイルに保存</button>' +
+    '<button class="btn" data-action="bkimport">ファイルから読み込む</button></div>' +
+    '<input type="file" id="bkfile" accept=".json,application/json" hidden>' +
+    (ui.bkArm ? '<div class="note warn">「' + esc(ui.bkArm.name) + '」(' + esc(ui.bkArm.when) + ' 保存分)で、いまの記録をすべて置き換えます。よければもう一度押してください。</div><div class="bkrow"><button class="btn danger" data-action="bkgo">置き換える</button><button class="btn" data-action="bkcancel">やめる</button></div>' : '') +
+    '<small>最後に保存したバックアップ: ' + (state.lastBackup ? esc(state.lastBackup) : 'まだありません') + '</small></div></section></div>';
 }

@@ -24,6 +24,10 @@ document.addEventListener('click', e => {
     state.goals.week.start = ws0; state.goals.week.end = addDays(ws0, 6); ui.wk = ws0; ui.calJump = true; ui.calPos = {};
     save(); render(); toast('1週間の始まりを' + WD[v] + '曜にしました'); return;
   }
+  if (a === 'bkexport') { backupExport(); return; }
+  if (a === 'bkimport') { const f = document.getElementById('bkfile'); if (f) { f.value = ''; f.click(); } return; }
+  if (a === 'bkcancel') { ui.bkArm = null; render(); return; }
+  if (a === 'bkgo') { backupApply(); return; }
   if (a === 'menu') { ui.menu = !ui.menu; render(); return; }
   if (a === 'reset') {
     if (!ui.resetArm) { ui.resetArm = true; render(); return; }
@@ -236,6 +240,7 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const el = e.target; const d = el.dataset || {};
+  if (el.id === 'bkfile') { backupRead(el.files && el.files[0]); return; }
   if (d.chg === 'evmove') {
     const ev = state.events.find(x => x.id === d.id); if (!ev || ev.done) return;
     const date = d.k === 'date' ? el.value : ev.date; const start = d.k === 'time' ? toMin(el.value) : ev.start;
@@ -310,3 +315,49 @@ try {
 } catch (e) {}
 // 日付が変わったら(開きっぱなしでも)切り替える
 setInterval(() => { const td = iso(new Date()); if (state.day !== td && !DR) { state = syncSP(rollover(state, td)); ui.wk = sundayOf(td); save(); render(); } }, 60000);
+
+/* ---- バックアップ(ファイルに保存 / 読み込み) ---- */
+function stampJP(dt) { const p = n => String(n).padStart(2, '0'); return dt.getFullYear() + '/' + p(dt.getMonth() + 1) + '/' + p(dt.getDate()) + ' ' + p(dt.getHours()) + ':' + p(dt.getMinutes()); }
+async function backupExport() {
+  const now = new Date(); const p = n => String(n).padStart(2, '0');
+  const fname = 'gamification-backup-' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate()) + '-' + p(now.getHours()) + p(now.getMinutes()) + '.json';
+  const data = JSON.stringify({ app: 'gamification', format: 1, exported: now.toISOString(), state: state }, null, 1);
+  const blob = new Blob([data], { type: 'application/json' });
+  try {
+    const dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null;
+    if (dl) await dl.save({ filename: fname, data: blob });
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
+    state.lastBackup = stampJP(now); save(); render(); toast('バックアップを保存しました');
+  } catch (e) { if (!e || e.code !== 'declined') toast('保存できませんでした'); }
+}
+function backupRead(file) {
+  if (!file) return;
+  const r = new FileReader();
+  r.onerror = () => toast('ファイルを読めませんでした');
+  r.onload = () => {
+    try {
+      const j = JSON.parse(String(r.result));
+      const st = j && j.app === 'gamification' && j.state ? j.state : null;
+      const mig = st ? migrate(st) : null;
+      if (!mig || !mig.goals || !Array.isArray(mig.events)) throw new Error('bad');
+      ui.bkArm = { name: file.name, when: j.exported ? stampJP(new Date(j.exported)) : '日時不明', state: mig };
+      render();
+    } catch (e) { ui.bkArm = null; render(); toast('このファイルは読み込めません(バックアップのファイルではないようです)'); }
+  };
+  r.readAsText(file);
+}
+function backupApply() {
+  if (!ui.bkArm) return;
+  const keepStamp = state.lastBackup;
+  const next = ui.bkArm.state; ui.bkArm = null;
+  state = rollover(next, iso(new Date()));
+  if (state.wkStart != null) WKS = state.wkStart;
+  ['events', 'log', 'notices', 'gcalDel'].forEach(k => { if (!state[k]) state[k] = []; });
+  ['journal', 'closed', 'inv'].forEach(k => { if (!state[k]) state[k] = {}; });
+  if (!state.pend) state.pend = { pts: {}, gold: 0 };
+  if (!state.habHide) state.habHide = []; if (!state.hab) state.hab = []; if (!state.habDist) state.habDist = {}; if (!state.qlib) state.qlib = {}; if (!state.shopHide) state.shopHide = []; if (!state.shopOrder) state.shopOrder = [];
+  normGoals(state.goals.week); normGoals(state.goals.month);
+  if (!state.lastBackup) state.lastBackup = keepStamp;
+  state = syncSP(state); applyTheme(); ui.wk = sundayOf(state.day); ui.calJump = true; ui.calPos = {}; ui.pop2 = null;
+  save(); render(); toast('バックアップから戻しました');
+}

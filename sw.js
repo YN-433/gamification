@@ -1,5 +1,5 @@
 /* オフラインで開けるようにするサービスワーカー。ファイルを更新したら VERSION を変えます。 */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'gamification-' + VERSION;
 const CORE = ['./', './app.js','./core.js','./drag.js','./events.js','./game.css','./index.html','./logic.js','./manifest.webmanifest','./pdf.js','./plan.js','./pwa-shim.js','./quest.js','./refl.js','./styles.css','./sync.js','./timeline.js','./views.js', './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(CORE)).then(() => self.skipWaiting())); });
