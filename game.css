@@ -550,7 +550,7 @@ body.nosnap .calscroll { scroll-snap-type: none; }
   color-scheme: light;
   --bg: #FFFFFF; --surface: #FFFFFF; --surface-2: #F1F3F2; --ink: #12242B; --muted: #5F7074; --line: #DADFDD;
   --accent: #0B8A5E; --on-accent: #FFFFFF; --gold: #8F6200; --gold-fill: #EDB02A; --mp: #1B6FA6; --mp-fill: #2F9ED8; --warn: #B9400B;
-  --cha: #CF3F75; --hlt: #1F8A55; --tec: #D0521B; --reg: #7452C4; --int: #2269BF;
+  --cha: #CF3F75; --vit: #52B032; --tec: #7452C4; --reg: #D0521B; --int: #2269BF;
 }
 .qh summary b { font-size: 15px; }
 
@@ -652,3 +652,54 @@ html{background:var(--bg)}
 .tgc{font-size:11.5px;min-height:30px;padding:0 10px}.tgc.all{font-size:11.5px}
 .yfb{font-size:12px}
 .tgc,.tgc.on,.yfb,.yfb.on{font-weight:400}
+
+/* ---- v14: カレンダーの色は分類の色だけ・縦ズーム・タッチスクロール ---- */
+.tlb, .qchip { background-image: none !important; }
+.tlb { background-color: color-mix(in srgb, var(--c) 68%, var(--surface)); border: 2px solid var(--c); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); }
+.tlb.done { background-color: color-mix(in srgb, var(--c) 26%, var(--surface)); color: var(--ink); text-shadow: none; box-shadow: none; border-color: var(--c); }
+.tlb.mj-l, .tlb.mj-r { border-color: var(--c); }
+.qchip { background-color: color-mix(in srgb, var(--c) 68%, var(--surface)); border: 2px solid var(--c); color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.45); box-shadow: 0 2px 0 color-mix(in srgb, var(--c) 55%, #000); }
+.qchip small { color: #ffffffe0; }
+.mev i { background-color: color-mix(in srgb, var(--c) 68%, var(--surface)); }
+.tlb[data-drag] { touch-action: pan-x pan-y; }
+.calscroll .tltrack { height: var(--rh, 30px); }
+.calscroll.multi { height: calc(20px + 22px + 7 * (var(--rh, 30px) + 4px) + 4px); }
+.calscroll .tld { font-size: 11px; }
+.zoom .zl { font-size: 11px; color: var(--muted); align-self: center; }
+.tlfoot { row-gap: 6px; }
+.tlfoot .gcbtn { margin-left: 0; } .tlfoot .infob + .gcbtn { margin-left: auto; }
+.lbe .lbr { margin-left: auto; display: inline-flex; gap: 4px; align-items: center; }
+.lbe .lbr .lbe-b { margin-left: 0; }
+.mfield:not(:has(.micb)) { grid-template-columns: minmax(0, 1fr); }
+.libit { display: grid; gap: 4px; text-align: left; width: 100%; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+.libit:active { background: var(--surface-2); }
+.libn { font-weight: 700; overflow-wrap: anywhere; }
+.liblist { display: grid; gap: 6px; max-height: 40vh; overflow: auto; }
+.libit .dcs { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.stdrow { display: grid; grid-template-columns: 1fr 96px; gap: 8px; }
+.ot2 .ytgs, .dcs .ytg { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+.tgc { font-weight: 400; }
+.tagin input.tgi, .tagin input.tgi:focus { border: 0; outline: 0; box-shadow: none; background: transparent; }
+/* ---- v15 ---- */
+.gcl { font-size: .72rem; color: var(--muted, #6b7b7d); align-self: center; margin-left: auto; white-space: nowrap }
+.stdrow .hl { min-width: 5em; font-size: .85rem }
+.outsh { margin-top: 14px }
+.tlfoot { flex-wrap: nowrap !important; gap: 5px !important; }
+.tlfoot .btn.sm { min-width: 0; padding-left: 10px; padding-right: 10px; flex: none }
+.tlfoot .zoom { flex: none; gap: 4px }
+.gcl { font-size: .64rem; flex: 0 1 auto; white-space: nowrap }
+/* ---- 転生の流れ ---- */
+.rbov { position: fixed; inset: 0; z-index: 80; overflow: auto; -webkit-overflow-scrolling: touch; background: radial-gradient(120% 90% at 50% 0%, var(--surface-2), var(--bg) 70%); padding: 28px 16px calc(28px + env(safe-area-inset-bottom)); }
+.rbst { position: relative; max-width: 520px; margin: 0 auto; display: grid; gap: 14px; justify-items: center; text-align: center; padding-top: 24px; }
+.rbst.left { justify-items: stretch; text-align: left; padding-top: 4px; }
+.rbst h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 22px; }
+.rbst p { margin: 0; color: var(--muted); }
+.rbst .btn.block { width: 100%; }
+.rbpet { position: relative; z-index: 1; animation: rbfloat 2.4s ease-in-out infinite; }
+.rbrings { position: absolute; top: 72px; left: 50%; width: 0; height: 0; pointer-events: none; }
+.rbrings i { position: absolute; left: -110px; top: -110px; width: 220px; height: 220px; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; animation: rbring 3s ease-out infinite; }
+.rbrings i:nth-child(2) { animation-delay: 1s; border-color: var(--gold-fill); } .rbrings i:nth-child(3) { animation-delay: 2s; border-color: var(--mp-fill); }
+.rbconf { position: fixed !important; inset: 0 0 auto 0 !important; height: 100vh !important; }
+@keyframes rbring { 0% { transform: scale(.2); opacity: .9 } 100% { transform: scale(2.6); opacity: 0 } }
+@keyframes rbfloat { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-8px) } }
+@media (prefers-reduced-motion: reduce) { .rbrings i, .rbpet { animation: none } }

@@ -54,8 +54,8 @@ function render() {
   normGoals(state.goals.week);
   calSave();
   document.getElementById('view').innerHTML = noticeBar() + (views[ui.tab] || viewHome)();
-  document.getElementById('pop').innerHTML = popHTML();
-  document.body.classList.toggle('modal', !!ui.pop2);
+  document.getElementById('pop').innerHTML = popHTML() + rbHTML();
+  document.body.classList.toggle('modal', !!ui.pop2 || !!ui.rbf);
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-current', b.dataset.tab === ui.tab ? 'page' : 'false'));
   calRestore();
 }
@@ -108,12 +108,13 @@ function noticeBar() {
 
 // 設定
 function viewSettings() {
-  const opts = [[6, '土曜はじまり(土〜金)'], [0, '日曜はじまり(日〜土)'], [1, '月曜はじまり(月〜日)']];
+  const opts = [6, 0, 1, 2, 3, 4, 5].map(d => [d, WD[d] + '曜はじまり(' + WD[d] + '〜' + WD[(d + 6) % 7] + ')']);
+  const sm = stdMin(); const sUnit = state.stdUnit === 'm' || sm % 60 ? 'm' : 'h'; const sVal = sUnit === 'h' ? sm / 60 : sm;
   return '<div class="stack"><div><button class="btn sm" data-action="tab" data-tab="home">← ホームへ</button></div>' +
-    '<section class="sec"><h2 class="sh">設定</h2><div class="form"><div class="field"><span class="lbl">画面の色</span><div class="seg" role="group" aria-label="画面の色">' + THEMES_UI.map(t => '<button data-action="theme" data-v="' + t[0] + '" aria-pressed="' + ((state.theme || 'default') === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><div class="field"><span class="lbl">1週間の始まり</span>' +
+    '<section class="sec"><h2 class="sh">設定</h2><div class="form"><div class="field"><span class="lbl">クエストの標準サイズ<small>　カレンダーに置いたときの長さ</small></span><span class="stdrow"><input class="in" type="number" inputmode="decimal" min="0.25" step="any" value="' + sVal + '" data-std="v" aria-label="標準サイズの数値"><select class="in" data-std="u" aria-label="単位"><option value="h"' + (sUnit === 'h' ? ' selected' : '') + '>時間</option><option value="m"' + (sUnit === 'm' ? ' selected' : '') + '>分</option></select></span><small>いま ' + fmtDur(sm) + '(15分きざみ・最大12時間)。置いたあとは、予定をタップして開始・終了で変えられます。</small></div><div class="field"><span class="lbl">朝・夜の習慣の時間<small>　記録するときの、はじめの時間(記録のとき変えられます)</small></span>' + [['morning', '朝の習慣'], ['night', '夜の習慣']].map(h => '<span class="stdrow"><span class="hl">' + h[1] + '</span><input class="in" type="time" step="900" value="' + fmtT(habT(h[0])[0]) + '" data-habt="' + h[0] + '" data-w="s" aria-label="' + h[1] + 'の開始"><span>〜</span><input class="in" type="time" step="900" value="' + fmtT(habT(h[0])[1] % 1440) + '" data-habt="' + h[0] + '" data-w="e" aria-label="' + h[1] + 'の終了"></span>').join('') + '</div><div class="field"><span class="lbl">画面の色</span><div class="seg" role="group" aria-label="画面の色">' + THEMES_UI.map(t => '<button data-action="theme" data-v="' + t[0] + '" aria-pressed="' + ((state.theme || 'default') === t[0]) + '">' + t[1] + '</button>').join('') + '</div></div><div class="field"><span class="lbl">1週間の始まり</span>' +
     '<div class="seg col" role="group" aria-label="1週間の始まり">' + opts.map(o => '<button data-action="wks" data-v="' + o[0] + '" aria-pressed="' + (WKS === o[0]) + '">' + o[1] + '</button>').join('') + '</div>' +
-    '<div class="note">基本は土曜はじまり(土〜金)です。変えると、カレンダー・今週の目標・イベントクエストの週が、この曜日で区切られます。今週の目標の期間は、今日をふくむ週に合わせ直します。</div></div></div></section>' +
-    (window.IS_PWA ? '<section class="sec"><h2 class="sh">Googleカレンダー</h2><div class="form"><div class="note">カレンダーの画面の「Googleカレンダーに反映」を押すと、Googleのログインが出ます(ログインは約1時間ごとに必要です)。ログインに使うのは、アプリのテストユーザーに入れたアカウントです。</div><div class="bkrow"><button class="btn" data-action="gsignout">Googleとの接続を解除</button></div><small>' + (window.GAUTH && GAUTH.signedIn() ? '状態: ログイン中' : '状態: ログインしていません') + '</small></div></section>' : '') +
+    '<div class="note">基本は土曜はじまり(土〜金)です。7つの曜日から選べます。変えると、カレンダー・今週の目標・イベントクエストの週が、この曜日で区切られます。今週の目標の期間は、今日をふくむ週に合わせ直します。</div></div></div></section>' +
+    (window.IS_PWA ? '<section class="sec"><h2 class="sh">Googleカレンダー</h2><div class="form"><div class="note">カレンダーの画面の「反映」を押すと、Googleのログインが出ます(ログインは約1時間ごとに必要です)。ログインに使うのは、アプリのテストユーザーに入れたアカウントです。</div><div class="bkrow"><button class="btn" data-action="gsignout">Googleとの接続を解除</button></div><small>' + (window.GAUTH && GAUTH.signedIn() ? '状態: ログイン中' : '状態: ログインしていません') + '</small></div></section>' : '') +
     '<section class="sec"><h2 class="sh"><span class="shl">データのバックアップ' + infoBtn('backup') + '</span></h2><div class="form">' +
     '<div class="note">いまの記録(クエスト・ステータス・ゴールド・目標・省察など)を、ファイルに保存できます。機種変更や、更新・初期化の前に取っておくと安心です。</div>' +
     '<div class="bkrow"><button class="btn primary" data-action="bkexport">ファイルに保存</button>' +

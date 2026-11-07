@@ -15,7 +15,7 @@ function dragSrc(el) {
 function dragBegin(el, x, y, touch) {
   const src = dragSrc(el); if (!src) return;
   const r = el.getBoundingClientRect();
-  DR = { el: el, src: src, sx: x, sy: y, x: x, y: y, touch: touch, on: false, w: r.width, h: r.height, grab: src.kind === 'ev' ? (x - r.left) / Math.max(1, r.width) * ((state.events.find(q => q.id === src.id) || { boxes: 1 }).boxes * 120) : 0, hover: null, timer: null, scroll: null, tgt: null };
+  DR = { el: el, src: src, sx: x, sy: y, x: x, y: y, touch: touch, on: false, w: r.width, h: r.height, grab: src.kind === 'ev' ? (x - r.left) / Math.max(1, r.width) * Math.round((state.events.find(q => q.id === src.id) || { boxes: 1 }).boxes * 120) : 0, hover: null, timer: null, scroll: null, tgt: null };
   if (touch) DR.timer = setTimeout(dragStart, HOLD_MS);
 }
 function dragStart() {
@@ -52,8 +52,8 @@ function dragFind() {
   const row = t.closest('[data-row]');
   if (row) {
     const rect = row.getBoundingClientRect(); const mins = TL0 + (DR.x - rect.left) / rect.width * TLS;
-    const boxes = DR.src.kind === 'icon' ? 1 : (state.events.find(x => x.id === DR.src.id) || { boxes: 1 }).boxes;
-    const start = clampStart(DR.src.kind === 'icon' ? mins - 60 : mins - DR.grab, boxes);
+    const boxes = DR.src.kind === 'icon' ? stdBoxes() : (state.events.find(x => x.id === DR.src.id) || { boxes: 1 }).boxes;
+    const start = clampStart(DR.src.kind === 'icon' ? mins - stdMin() / 2 : mins - DR.grab, boxes);
     return { date: row.dataset.row, start: start, boxes: boxes, row: row };
   }
   const cell = t.closest('[data-dropdate]');
@@ -115,7 +115,7 @@ function dragEnd(cancel) {
   }
   if (d.src.kind === 'icon') {
     const dist = distOf(d.src.area); if (!dist) { render(); toast('クエストの配分を決定してから置けます'); return; }
-    const n = addEvent(state, { date: tg.date, start: tg.start, gk: d.src.gk, area: d.src.area, alloc: allocFromDist(dist) });
+    const n = addEvent(state, { date: tg.date, start: tg.start, gk: d.src.gk, area: d.src.area, alloc: allocFromDist(dist, stdBoxes()) });
     const ev = n.events[n.events.length - 1];
     commit(n, jp(tg.date) + ' ' + fmtT(ev.start) + ' に「' + d.src.area + '」を入れました');
   } else {

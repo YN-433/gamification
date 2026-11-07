@@ -119,7 +119,7 @@ function reflSection(gk, g) {
   return '<section class="sec"><h2 class="sh">' + label + 'の省察<small>' + range + '</small></h2><div class="form">' +
     '<div class="note">' + infoBtn('reflflow') + '</div>' +
     reflFactsHTML(gk, g, label) +
-    '<label class="field"><span class="lbl">ふりかえり<small>　マイクで話すか、文字で入力</small></span><span class="mfield tall">' + (rf.done ? '' : micBtn()) + '<textarea class="in" rows="6" data-rf="text"' + (rf.done ? ' disabled' : '') + ' placeholder="うまくいったこと、うまくいかなかったこと、次に変えることを話します。">' + esc(rf.text || '') + '</textarea></span></label>' +
+    '<label class="field"><span class="lbl">ふりかえり<small>　マイクで話すか、文字で入力</small></span><span class="mfield tall">' + (rf.done ? '' : micBtnReal()) + '<textarea class="in" rows="6" data-rf="text"' + (rf.done ? ' disabled' : '') + ' placeholder="うまくいったこと、うまくいかなかったこと、次に変えることを話します。">' + esc(rf.text || '') + '</textarea></span></label>' +
     (rf.done ? '' : '<div class="btnrow"><button class="btn sm" data-action="reflsum"' + (has && sample && !busy ? '' : ' disabled') + '>' + (busy && ui.rwhat === 'sum' ? '要約中…' : '要約してテキストにする') + '</button><button class="btn primary sm" data-action="reflscore"' + (has && sample && !busy ? '' : ' disabled') + '>' + (busy && ui.rwhat === 'score' ? '採点中…' : '採点してもらう(100点満点)') + '</button></div>' +
       (sample ? '' : '<div class="note">この表示ではAIの要約・採点が使えません。点数は下の欄に自分で入れられます。<input class="in" type="number" inputmode="numeric" min="0" max="100" value="' + (rf.score == null ? '' : rf.score) + '" data-rf="score" style="max-width:120px;display:inline-block" aria-label="総合評価"> 点</div>') +
       (ui.rerr ? '<div class="note warn" role="alert">' + esc(ui.rerr) + '</div>' : '')) +

@@ -8,7 +8,7 @@ const CFG = {
   STAR: { 1: 0.8, 2: 1.0, 3: 1.2, 4: 1.5, 5: 2.0 }
 };
 const STATS = [
-  { id: 'CHA', name: '魅力' }, { id: 'HLT', name: '健康' }, { id: 'REG', name: '規律' },
+  { id: 'CHA', name: '魅力' }, { id: 'VIT', name: '活力' }, { id: 'REG', name: '規律' },
   { id: 'INT', name: '知性' }, { id: 'TEC', name: '技術' }
 ];
 const RANKS = (function () {
@@ -41,13 +41,13 @@ const SKILLS = [
   { id: 'zone',  name: 'ゾーン突入',        cat: '評価特化', max: '★4・5の倍率 +1.5',   eff: lv => '★4・5の倍率 +' + (0.15 * lv).toFixed(2) },
   { id: 'arch',  name: '建築家の眼',        cat: 'INT特化',  max: 'INT獲得Pt +150%',    eff: lv => 'INT獲得Pt +' + (15 * lv) + '%' },
   { id: 'beau',  name: '美意識の目覚め',    cat: 'CHA特化',  max: 'CHA獲得Pt +150%',    eff: lv => 'CHA獲得Pt +' + (15 * lv) + '%' },
-  { id: 'camp',  name: 'ソロキャンパー',    cat: 'HLT特化',  max: 'HLT獲得Pt +150%',    eff: lv => 'HLT獲得Pt +' + (15 * lv) + '%' }
+  { id: 'camp',  name: 'ソロキャンパー',    cat: 'VIT特化',  max: 'VIT獲得Pt +150%',    eff: lv => 'VIT獲得Pt +' + (15 * lv) + '%' }
 ];
-const CATSKILL = { INT: 'arch', CHA: 'beau', HLT: 'camp' };
+const CATSKILL = { INT: 'arch', CHA: 'beau', VIT: 'camp' };
 const QUESTS = [
   { id: 'q1', cat: 'CHA', name: '丁寧なスキンケア＆UV対策', kind: 'デイリー', xp: 10, g: 10 },
-  { id: 'q2', cat: 'HLT', name: '7時間以上の質の高い睡眠', kind: 'デイリー', xp: 20, g: 20 },
-  { id: 'q3', cat: 'HLT', name: 'ストレッチまたは15分運動', kind: 'デイリー', xp: 15, g: 15 },
+  { id: 'q2', cat: 'VIT', name: '7時間以上の質の高い睡眠', kind: 'デイリー', xp: 20, g: 20 },
+  { id: 'q3', cat: 'VIT', name: 'ストレッチまたは15分運動', kind: 'デイリー', xp: 15, g: 15 },
   { id: 'q4', cat: 'INT', name: '30分間の集中学習', kind: 'デイリー', xp: 20, g: 20 },
   { id: 'q5', cat: 'REG', name: '朝7:00までに起床', kind: 'デイリー', xp: 10, g: 10 },
   { id: 'q6', cat: 'INT', name: '建築・美術館などの文化見学', kind: 'ウィークリー', xp: 100, g: 100 },
@@ -60,10 +60,13 @@ const SHOP = [
   { id: 't3', cat: '文化', name: '博物館観覧券 (2,000円)', g: 2000, mp: 20, pts: {} },
   { id: 't4', cat: 'スイーツ', name: 'スイーツ購入券 (500円)', g: 500, mp: 20, pts: {} },
   { id: 't5', cat: '書籍', name: '新刊購入券 (1,000円)', g: 1000, mp: 10, pts: {} },
-  { id: 't6', cat: '贈り物', name: '贈品購入券 (2,000円)', g: 2000, mp: 20, pts: {} },
-  { id: 's8', cat: '転生大報酬', name: '1周目 転生旅行チケット', g: 0, mp: 100, pts: { CHA: 100, HLT: 100, REG: 100, INT: 100, TEC: 100 }, locked: true }
+  { id: 't6', cat: '贈り物', name: '贈品購入券 (2,000円)', g: 2000, mp: 20, pts: {} }
 ];
 const LEGACY = [
+  { id: 's8', cat: '転生大報酬', name: '1周目 転生旅行チケット', g: 0, mp: 100, pts: { CHA: 100, VIT: 100, REG: 100, INT: 100, TEC: 100 }, legacy: true },
+  { id: 'k1', cat: '転生特別券', name: '旅行特別券', g: 0, mp: 100, pts: {}, legacy: true },
+  { id: 'k2', cat: '転生特別券', name: 'ガジェット特別券', g: 0, mp: 100, pts: {}, legacy: true },
+  { id: 'k3', cat: '転生特別券', name: '体験特別券', g: 0, mp: 100, pts: {}, legacy: true },
   { id: 's1', cat: 'ガジェット', name: 'ガジェット購入券 (2,000円)', g: 2000, mp: 30, pts: {}, legacy: true },
   { id: 's2', cat: '書籍・教養', name: '古本購入券 (1,000円以下)', g: 1000, mp: 30, pts: {}, legacy: true },
   { id: 's3', cat: '文化・リフレッシュ', name: '美術館・博物館・資料館', g: 1200, mp: 40, pts: {}, legacy: true },
@@ -112,7 +115,7 @@ function distFromStats(stats) {
   ks.sort((a, b) => d[b] - d[a]); for (let i = 0; left > 0; i++, left--) d[ks[i % ks.length]] += 1;
   return d;
 }
-const allocFromDist = d => { const a = {}; STAT_IDS.forEach(k => { if (d[k] > 0) a[k] = Math.round(d[k] / DIST_TOTAL.a * 1000) / 1000; }); return a; };
+const allocFromDist = (d, boxes) => { const a = {}; STAT_IDS.forEach(k => { if (d[k] > 0) a[k] = Math.round(d[k] / DIST_TOTAL.a * 1000) / 1000; }); return boxes && boxes !== 1 ? scaleAlloc(a, boxes) : a; };
 // 予定BOXは、カレンダーに置いた予定の数から自動で数える
 const areaBox = (g, a) => a.name ? Math.round(state.events.filter(e => e.area === a.name && inRange(e.date, g)).reduce((t, e) => t + e.boxes, 0) * 1000) / 1000 : 0;
 const sumBoxes = g => g.areas.reduce((t, a) => t + areaBox(g, a), 0);
@@ -122,12 +125,15 @@ function normArea(a) {
   a.dist = fullDist(a.dist); delete a.stats; delete a.box;
   if (a.locked == null) a.locked = false; if (a.ed == null) a.ed = false;
   if (a.want !== 'm') a.want = 'w'; a.work = !!a.work;
+  if (!Array.isArray(a.tags)) a.tags = a.tag ? tagParse(a.tag) : []; delete a.tag; delete a.memo;
   return a;
 }
 /* 枠の色: やりたい(want)/やるべき(must) × 仕事/私用 */
 const WW = { w1: ['want×working', '#039BE5'], w0: ['want×private', '#33B679'], m1: ['must×working', '#616161'], m0: ['must×private', '#E67C73'] }; // Googleカレンダーの ピーコック/セージ/グラファイト/フラミンゴ
 const wwOf = a => WW[(a.want === 'm' ? 'm' : 'w') + (a.work ? 1 : 0)];
-const wwByName = n => { for (const k of ['week', 'month']) { const a = state.goals[k].areas.find(x => x.name === n); if (a) return wwOf(a); } return null; };
+const wwByName = n => { for (const k of ['week', 'month']) { const a = state.goals[k].areas.find(x => x.name === n); if (a) return wwOf(a); } const l = state.lib && state.lib.a && state.lib.a[n]; return l ? WW[(l.want === 'm' ? 'm' : 'w') + (l.work ? 1 : 0)] : null; };
+// カレンダーの色は、分類(want/must × working/private)の色だけ
+const evColor = n => { const w = n ? wwByName(n) : null; return w ? w[1] : '#8a9a9c'; };
 // ステータスの比率で、多色(デュエマの多色カードのように)に塗り分ける。色はごく淡く(bar=カレンダーの棒はやや濃いめ)
 function gradOf(o, bar) {
   const ks = STAT_IDS.filter(k => o && o[k] > 0); if (!ks.length) return 'none';
@@ -137,7 +143,7 @@ function gradOf(o, bar) {
 }
 /* 常駐クエスト: 毎週の目標に自動で入る(消せない) */
 const RESIDENT = [
-  { k: 'shop', name: '買出', dist: { REG: 10, HLT: 10 }, rec: 1, on: () => true },
+  { k: 'shop', name: '買出', dist: { REG: 10, VIT: 10 }, rec: 1, on: () => true },
   { k: 'wk', name: '1週間の予定', dist: { REG: 10, INT: 10 }, on: () => true },
   // 月末をふくむ週の、ひとつ前の週に出る
   { k: 'mo', name: '1か月の予定', dist: { REG: 8, INT: 12 }, on: g => { for (let i = 7; i <= 13; i++) { const d = addDays(g.start, i); if (addDays(d, 1).slice(8) === '01') return true; } return false; } },
@@ -156,6 +162,7 @@ function normOutcome(o) {
   if (!o.dist) o.dist = mkDist({ INT: 20 }); o.dist = fullDist(o.dist);
   if (o.locked == null) o.locked = false; if (o.ed == null) o.ed = false;
   if (!(Number(o.n) >= 0) || o.n === '' || o.n == null) o.n = 1; if (!o.u) o.u = '回'; if (o.v == null) o.v = o.done ? o.n : 0;
+  if (!Array.isArray(o.tags)) o.tags = [];
   return o;
 }
 function normGoals(g) { g.areas.forEach(normArea); g.outcomes.forEach(normOutcome); if (!g.hunits) g.hunits = {}; if (g === state.goals.week) ensureResident(g); return g; }
@@ -171,7 +178,7 @@ function seedGoals(td) {
   return {
     week: {
       start: ws, end: addDays(ws, 6), perDay: 3,
-      areas: [mkArea('バイト', 3, { REG: 12, CHA: 8 }, { want: 'm', work: true }), mkArea('転職活動・引越', 6, { REG: 10, INT: 10 }, { work: true }), mkArea('ゲーミフィケーション', 10, { INT: 17, REG: 3 }), mkArea('サッカー観戦', 8, { CHA: 10, HLT: 6, TEC: 4 })],
+      areas: [mkArea('バイト', 3, { REG: 12, CHA: 8 }, { want: 'm', work: true }), mkArea('転職活動・引越', 6, { REG: 10, INT: 10 }, { work: true }), mkArea('ゲーミフィケーション', 10, { INT: 17, REG: 3 }), mkArea('サッカー観戦', 8, { CHA: 10, VIT: 6, TEC: 4 })],
       outcomes: [{ t: '不動産を見に行く', done: false, locked: false, dist: mkDist({ REG: 12, INT: 8 }) }, { t: 'バイトに入る', done: false, locked: false, dist: mkDist({ REG: 20 }) }],
       habits: { morning: 2, night: 2, hiit: 2, reading: 1, lab: 1, meditation: 1 }
     },
@@ -231,7 +238,7 @@ function seedEvents() {
 function seedState(td) {
   return {
     v: 5, wkStart: 6, habHide: [], hab: [], habDist: {}, qlib: {}, day: td, pend: { pts: {}, gold: 0 }, closed: {}, journal: {}, widgets: ['qstat', 'gain', 'health', 'box'], gcalDel: [], cycle: 1,
-    pts: { CHA: 0, HLT: 0, REG: 0, INT: 104, TEC: 0 },
+    pts: { CHA: 0, VIT: 0, REG: 0, INT: 104, TEC: 0 },
     gold: 78, mp: CFG.MP_FALLBACK, mpBase: CFG.MP_FALLBACK, morning: { src: 'fallback', score: null },
     sp: 0, spRank: 0, spStats: [], notices: [],
     today: { boxes: 0, steps: null, sleep: null, habits: 0, xp: 0, g: 0 },
@@ -283,8 +290,22 @@ const HP = 26; // 1時間の高さ(px)
 const DAY_START = 0, DAY_END = 24 * 60;
 const fmtT = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
 const toMin = t => { const a = String(t || '').split(':').map(Number); return (a[0] || 0) * 60 + (a[1] || 0); };
-const evEnd = e => e.start + e.boxes * 120;
-function clampStart(start, boxes) { return clampN(Math.round(start / 30) * 30, DAY_START, Math.max(DAY_START, DAY_END - boxes * 120)); }
+const evEnd = e => Math.round(e.start + e.boxes * 120);
+function clampStart(start, boxes) { return clampN(Math.round(start / 15) * 15, DAY_START, Math.max(DAY_START, DAY_END - Math.round(boxes * 120))); }
+// クエストの標準サイズ(分)。設定で変えられる。基本は120分(=1BOX)
+const stdMin = () => clampN(Math.round(Number(state.stdMin) || 120), 15, 720);
+const stdBoxes = () => stdMin() / 120;
+const fmtBox = b => String(Math.round(b * 100) / 100);
+// ステータスごとのBOX配分(alloc)の比率を保ったまま、合計をboxesにそろえる
+function scaleAlloc(alloc, boxes) {
+  const ks = Object.keys(alloc).filter(k => alloc[k] > 0); const tot = ks.reduce((a, k) => a + alloc[k], 0); const out = {};
+  if (!ks.length || !(tot > 0)) return alloc;
+  let used = 0; ks.forEach((k, i) => { if (i < ks.length - 1) { out[k] = Math.round(alloc[k] / tot * boxes * 10000) / 10000; used += out[k]; } });
+  out[ks[ks.length - 1]] = Math.round((boxes - used) * 10000) / 10000; return out;
+}
+// 複数タグ(今年の目標・クエスト・予定で共通)。区切りは空白・カンマ
+const tagParse = s => { const r = []; String(s || '').split(/[,、，\s]+/).forEach(t => { t = t.replace(/^#/, '').trim().slice(0, 12); if (t && r.indexOf(t) < 0) r.push(t); }); return r.slice(0, 8); };
+const oTags = o => Array.isArray(o.tags) ? o.tags : (o.tag ? tagParse(o.tag) : []);
 // その日の空いている時間(9:00から)に入れる
 function autoSlot(s, date, boxes) {
   const dur = boxes * 120; let t = 540;
@@ -330,6 +351,15 @@ function updateEvent(s0, id, spec) {
   const s = clone(s0); const e = s.events[i];
   e.date = spec.date; e.gk = spec.gk || null; e.area = spec.area || ''; e.alloc = spec.alloc; e.boxes = allocTotal(spec.alloc);
   e.start = clampStart(spec.start != null ? spec.start : e.start, e.boxes);
+  return s;
+}
+// 予定の長さを変える(終了時間の入力)。ステータスの配分は比率を保つ
+function resizeEvent(s0, id, boxes) {
+  const i = s0.events.findIndex(e => e.id === id);
+  if (i < 0 || s0.events[i].done) return s0;
+  const s = clone(s0); const e = s.events[i];
+  const mins = clampN(Math.round(boxes * 120 / 15) * 15, 15, DAY_END - e.start);
+  e.alloc = scaleAlloc(e.alloc, mins / 120); e.boxes = allocTotal(e.alloc);
   return s;
 }
 // 日付と開始時間を動かす(ドラッグや時間の入力)。達成済みの予定は、取り消してから動かす。
@@ -478,3 +508,36 @@ function syncSP(s0) {
   return s;
 }
 // </logic>
+
+/* ---- v15: 朝・夜の習慣の時間 / 時間単位の計上 ---- */
+const HABT_DEF = { morning: [420, 480], night: [1320, 1410] };
+const HABCAL = { morning: 1, night: 1 };
+const habT = hk => { const t = (state.habT || {})[hk]; return Array.isArray(t) && t.length === 2 ? t : HABT_DEF[hk]; };
+const isTU = u => u === '分' || u === '時間';
+const fmtAmt = v => String(Math.round((Number(v) || 0) * 100) / 100);
+// 「今日の終了」を決めたとき、朝・夜の習慣の記録をカレンダーの予定(完了済み)にする
+function habCalFlush(s0) {
+  const list = (s0.habCal || []).filter(h => !h.flushed); if (!list.length) return s0;
+  const adds = list.map(h => { const dur = Math.max(15, h.end - h.start); const nm = (HAB.find(x => x[0] === h.hk) || [0, h.hk])[1]; const dist = habDist(h.hk);
+    const alloc = distSum(dist) > 0 ? allocFromDist(dist, dur / 120) : { REG: dur / 120 };
+    return { h: h, ev: { id: newId(), date: h.date, start: h.start, gk: 'week', area: nm, alloc: alloc, boxes: dur / 120, star: 0, done: true, fin: true, xpBy: {}, xp: 0, g: 0, spent: 0, memo: h.memo || '', tags: [], habCal: true } };
+  });
+  const s = clone(s0);
+  adds.forEach(x => { s.events.push(x.ev); s.habCal.find(y => y.id === x.h.id).flushed = true; });
+  return s;
+}
+
+/* ---- v15: 転生。その周回で獲得したSPの量で、選べる特別券の枚数がふえる(何周目かは関係ない) ---- */
+const RB_TICKETS = [['k1', '旅行特別券'], ['k2', 'ガジェット特別券'], ['k3', '体験特別券']];
+const RB_STEP = 3; // SPがこの数ふえるごとに、選べる枚数が+1(はじめは1枚)
+const cycSP = s => Math.max(0, (Number(s.sp) || 0) - (Number(s.cycSP0) || 0));
+const rbPicks = s => 1 + Math.floor(cycSP(s) / RB_STEP);
+function rebirth(s0, pick) {
+  const tot = RB_TICKETS.reduce((a, t) => a + (Number(pick[t[0]]) || 0), 0);
+  if (tot < 1 || tot > rbPicks(s0)) return s0;
+  const s = clone(s0); const got = [];
+  RB_TICKETS.forEach(t => { const n = Number(pick[t[0]]) || 0; if (n > 0) { s.inv[t[0]] = (s.inv[t[0]] || 0) + n; got.push(t[1] + ' ×' + n); } });
+  s.cycle = (s.cycle || 1) + 1; s.cycSP0 = s.sp || 0;
+  s.shopLog.unshift({ kind: 'buy', name: '転生: ' + got.join('、'), n: 1, g: 0, at: Date.now() });
+  return s;
+}

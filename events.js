@@ -45,12 +45,16 @@ document.addEventListener('click', e => {
   /* ポップアップ */
   if (a === 'pop') {
     const k = el.dataset.k;
-    if (k === 'add') { const ar = goalAreas()[0]; ui.pop2 = { k: 'add', area: ar ? ar.name : '', name: '', stat: ar && ar.stats[0] ? ar.stats[0] : 'INT', boxes: 1, date: inRange(state.day, { start: ui.wk, end: addDays(ui.wk, 6) }) ? state.day : ui.wk, time: '09:00', tag: '', memo: '' }; }
+    if (k === 'add') { const ar = goalAreas()[0]; ui.pop2 = { k: 'add', area: ar ? ar.name : '', name: '', stat: ar && ar.stats && ar.stats[0] ? ar.stats[0] : (ar ? STAT_IDS.slice().sort((x, y) => ar.dist[y] - ar.dist[x])[0] : 'INT'), date: inRange(state.day, { start: ui.wk, end: addDays(ui.wk, 6) }) ? state.day : ui.wk, time: '09:00', end: fmtT((540 + stdMin()) % 1440) }; }
+    else if (k === 'lib') ui.pop2 = { k: 'lib', t: el.dataset.t, f: [] };
     else if (k === 'ticket') ui.pop2 = { k: 'ticket', id: el.dataset.id, n: 1 };
     else ui.pop2 = { k: k, id: el.dataset.id, star: 3, rep: !!el.dataset.rep };
     render(); return;
   }
   if (a === 'popclose') { ui.pop2 = null; render(); return; }
+  if (a === 'libnew') { libNew(el.dataset.t); return; }
+  if (a === 'libadd') { libAdd(el.dataset.t, el.dataset.key); return; }
+  if (a === 'libtag') { const p = ui.pop2; if (p) { const v = el.dataset.v; if (!v) p.f = []; else { const k = p.f.indexOf(v); if (k >= 0) p.f.splice(k, 1); else p.f.push(v); } render(); } return; }
   if (a === 'evsave') {
     const ta = document.querySelector('#pop textarea.memo'); const e = state.events.find(x => x.id === el.dataset.id);
     if (e && ta) { const t = String(ta.value || '').slice(0, 500); if (t.trim()) e.memo = t; else delete e.memo; save(); }
@@ -76,8 +80,11 @@ document.addEventListener('click', e => {
   if (a === 'addev') {
     const p = ui.pop2; if (!p || !DATE_RE.test(p.date || '')) return;
     const name = p.area || String(p.name || '').trim(); if (!name) { toast('クエスト名を入れてください'); return; }
-    const n = addEvent(state, { date: p.date, start: toMin(p.time), gk: p.area ? 'week' : null, area: name, alloc: { [p.stat]: p.boxes } });
-    const ev = n.events[n.events.length - 1]; if (p.tag) ev.tag = String(p.tag).slice(0, 20); if (p.memo) ev.memo = String(p.memo).slice(0, 200);
+    const st = toMin(p.time); let en = toMin(p.end); if (en === 0) en = 1440; const dur = en - st;
+    if (!(dur >= 15)) { toast('終了を、開始より後の時間にしてください'); return; }
+    const ar = goalAreas().find(x => x.name === p.area); const alloc = ar && distSum(ar.dist) === DIST_TOTAL.a ? allocFromDist(ar.dist, dur / 120) : { [p.stat]: dur / 120 };
+    const n = addEvent(state, { date: p.date, start: st, gk: p.area ? 'week' : null, area: name, alloc: alloc });
+    const ev = n.events[n.events.length - 1];
     ui.pop2 = null; ui.wk = sundayOf(p.date); commit(n, md2(p.date) + ' ' + fmtT(ev.start) + ' に入れました'); return;
   }
   if (a === 'useticket') {
@@ -87,8 +94,12 @@ document.addEventListener('click', e => {
   }
   if (a === 'closeyes') {
     const before = state; const pe = clone(state.pend);
-    const n = flushDay(state, state.day, false); commit(n);
-    ui.pop2 = { k: 'cele', pts: pe.pts, gold: pe.gold || 0, sp: state.sp - before.sp }; render(); return;
+    const hn = (state.habCal || []).filter(h => !h.flushed).length; const day0 = state.day; const rbDay = day0.slice(5) === '06-30' || day0.slice(5) === '12-31';
+    let n = flushDay(state, state.day, false); if (hn) n = habCalFlush(n); if (rbDay) n.rbPend = day0; commit(n);
+    const cele = { pts: pe.pts, gold: pe.gold || 0, sp: state.sp - before.sp };
+    if (rbDay) { ui.pop2 = null; ui.rb = { n: {} }; ui.rbf = { step: 'intro', cele: cele }; } else ui.pop2 = Object.assign({ k: 'cele' }, cele); render();
+    if (hn) { ui.wk = sundayOf(day0); render(); gcalSync().then(() => { const m = ui.gc && (ui.gc.msg || ui.gc.err); if (m) toast(m); }); }
+    return;
   }
 
   /* 週の切り替え・Googleカレンダー */
@@ -99,6 +110,7 @@ document.addEventListener('click', e => {
   if (a === 'mday') { ui.cv = 'week'; ui.wk = sundayOf(el.dataset.d); ui.calJump = true; render(); return; }
   if (a === 'zoom') { calSave(); ui.zpx = clampN(zpx() * (+el.dataset.d > 0 ? 1.4 : 1 / 1.4), ZMIN, ZMAX); render(); return; }
   if (a === 'gcal') { gcalSync(); return; }
+  if (a === 'gimport') { gcalImport(); return; }
 
   /* クエスト */
   if (a === 'qv') { ui.qv = el.dataset.v; render(); return; }
@@ -125,6 +137,13 @@ document.addEventListener('click', e => {
   /* ショップ */
   if (a === 'sh') { ui.sh = el.dataset.v; render(); return; }
   if (a === 'buy') { const it = shopItems(state).find(x => x.id === el.dataset.id); const n = buyItem(state, el.dataset.id); if (n !== state) commit(n, '「' + it.name + '」を買いました'); return; }
+  if (a === 'rbadj') { const rb = ui.rb || (ui.rb = { n: {} }); const id = el.dataset.id; const N = rbPicks(state); const tot = RB_TICKETS.reduce((x, t) => x + (rb.n[t[0]] || 0), 0); const d = +el.dataset.d;
+    if (d > 0 && tot >= N) return; rb.n[id] = Math.max(0, (rb.n[id] || 0) + d); rb.arm = false; render(); return; }
+  if (a === 'rbgo') { const rb = ui.rb; if (!rb) return;
+    const n = rebirth(state, rb.n); if (n === state) { render(); return; }
+    const got = RB_TICKETS.filter(t => rb.n[t[0]] > 0).map(t => t[1] + ' ×' + rb.n[t[0]]); n.rbPend = null; ui.rb = null; ui.rbf = { step: 'outro', got: got }; commit(n); return; }
+  if (a === 'rbstep') { if (!ui.rbf) return; const s = el.dataset.s; if (s === 'end') ui.rbf = null; else ui.rbf.step = s; render(); window.scrollTo(0, 0); const ov = document.querySelector('.rbov'); if (ov) ov.scrollTop = 0; return; }
+  if (a === 'rbstart') { ui.rbf = { step: 'intro' }; render(); return; }
   if (a === 'openitem') { ui.addItem = true; render(); return; }
   if (a === 'cancelitem') { ui.addItem = false; render(); return; }
   if (a === 'additem') {
@@ -209,20 +228,65 @@ document.addEventListener('click', e => {
   if (a === 'outinc' || a === 'outdec') {
     const gk = el.dataset.gk || 'week'; const o = state.goals[gk].outcomes[+el.dataset.i]; if (!o) return;
     const n = Number(o.n) || 1;
+    if (isTU(o.u)) { ui.pop2 = { k: 'amt', t: 'out', gk: gk, i: +el.dataset.i, sign: a === 'outinc' ? 1 : -1, name: o.t, u: o.u }; render(); return; }
     if (a === 'outinc') { o.v = Math.min(n, (Number(o.v) || 0) + 1); if (o.v >= n && !o.done) { tickOutcome(gk, +el.dataset.i); return; } }
     else { if (!(o.v > 0)) return; o.v = Math.max(0, o.v - 1); if (o.done && o.v < n) { tickOutcome(gk, +el.dataset.i); return; } }
     save(); render(); return;
   }
   if (a === 'subinc') {
-    const hk = el.dataset.hk; const ws = sundayOf(state.day);
+    const hk = el.dataset.hk; const ws = sundayOf(state.day); const un = habUnit(state.goals.week, hk);
+    if (HABCAL[hk]) {
+      for (let d = state.day; d >= ws; d = addDays(d, -1)) { const q = subFor(d).find(x => x.hk === hk); if (!q || qDone(q.key)) continue;
+        const t = habT(hk); ui.pop2 = { k: 'habt', hk: hk, date: d, name: q.t, start: t[0], end: t[1] }; render(); return; }
+      toast('今週は毎日つけ終わっています'); return;
+    }
+    if (isTU(un)) { const q = subFor(state.day).find(x => x.hk === hk); ui.pop2 = { k: 'amt', t: 'sub', hk: hk, sign: 1, name: q ? q.t : '', u: un }; render(); return; }
     for (let d = state.day; d >= ws; d = addDays(d, -1)) { const q = subFor(d).find(x => x.hk === hk); if (!q || qDone(q.key)) continue;
       const n = doQuest(state, q, d); if (n !== state) commit(n, q.t + ' +1回  +' + n.log.filter(x => x.qk === q.key)[0].xp + ' Pt'); return; }
     toast('今週は毎日つけ終わっています'); return;
   }
   if (a === 'subdec') {
-    const hk = el.dataset.hk; const ws = sundayOf(state.day);
+    const hk = el.dataset.hk; const ws = sundayOf(state.day); const un = habUnit(state.goals.week, hk);
+    if (isTU(un) && !HABCAL[hk]) { const q = subFor(state.day).find(x => x.hk === hk); ui.pop2 = { k: 'amt', t: 'sub', hk: hk, sign: -1, name: q ? q.t : '', u: un }; render(); return; }
     const e = state.log.filter(x => x.kind === 'sub' && x.hk === hk && x.date >= ws && !x.fin).sort((x, y) => x.date < y.date ? 1 : -1)[0];
-    if (!e) { toast('取り消せる記録がありません'); return; } const n = undoQuest(state, e.qk); if (n !== state) commit(n, '1回へらしました'); return;
+    if (!e) { toast('取り消せる記録がありません'); return; } const n = undoQuest(state, e.qk);
+    if (n !== state) { n.habCal = (n.habCal || []).filter(h => h.flushed || !(h.hk === hk && h.date === e.date)); commit(n, '1回へらしました'); } return;
+  }
+  if (a === 'habok') {
+    const p = ui.pop2; if (!p || p.k !== 'habt') return;
+    const st = toMin((document.querySelector('[data-pf="start"]') || {}).value), en0 = toMin((document.querySelector('[data-pf="end"]') || {}).value); const en = en0 === 0 ? 1440 : en0;
+    const memo = String((document.querySelector('[data-pf="memo"]') || {}).value || '').slice(0, 500);
+    if (!(en - st >= 15)) { toast('終了を、開始より15分以上あとにしてください'); return; }
+    const q = subFor(p.date).find(x => x.hk === p.hk); if (!q) return;
+    const n = doQuest(state, q, p.date); ui.pop2 = null;
+    if (n === state) { render(); return; }
+    n.habCal = (n.habCal || []).concat([{ id: newId(), hk: p.hk, date: p.date, start: st, end: en, memo: memo, flushed: false }]);
+    commit(n, q.t + ' +1回  +' + n.log.filter(x => x.qk === q.key)[0].xp + ' Pt(「今日を終了」でGoogleカレンダーに反映します)'); return;
+  }
+  if (a === 'amtok') {
+    const p = ui.pop2; if (!p || p.k !== 'amt') return;
+    const v = parseFloat((document.querySelector('[data-pf="amt"]') || {}).value); if (!(v > 0)) { toast('数を入れてください'); return; }
+    ui.pop2 = null;
+    if (p.t === 'out') {
+      const o = state.goals[p.gk].outcomes[p.i]; if (!o) { render(); return; } const n = Number(o.n) || 1;
+      o.v = Math.max(0, (Number(o.v) || 0) + p.sign * v);
+      if (p.sign > 0 && o.v >= n && !o.done) { tickOutcome(p.gk, p.i); return; }
+      if (p.sign < 0 && o.done && o.v < n) { tickOutcome(p.gk, p.i); return; }
+      save(); render(); toast(o.t + ' ' + (p.sign > 0 ? '+' : '−') + fmtAmt(v) + p.u); return;
+    }
+    const q = subFor(state.day).find(x => x.hk === p.hk); if (!q) { render(); return; }
+    if (p.sign > 0) {
+      let n = state; if (!qDone(q.key)) n = doQuest(state, q, state.day);
+      if (n === state && !qDone(q.key)) { render(); return; }
+      if (n === state) n = clone(state);
+      const en = n.log.find(x => x.qk === q.key); en.amt = (Number(en.amt) || 0) + v; commit(n, q.t + ' +' + fmtAmt(v) + p.u); return;
+    }
+    const ws = sundayOf(state.day);
+    const en = state.log.filter(x => x.kind === 'sub' && x.hk === p.hk && x.date >= ws && (Number(x.amt) || 0) > 0).sort((x, y) => x.date < y.date ? 1 : -1)[0];
+    if (!en) { toast('取り消せる記録がありません'); render(); return; }
+    const n = clone(state); const t = n.log.find(x => x.id === en.id); t.amt = Math.max(0, (Number(t.amt) || 0) - v);
+    if (t.amt === 0 && !t.fin) { commit(undoQuest(n, t.qk), '記録をへらしました'); return; }
+    commit(n, q.t + ' −' + fmtAmt(v) + p.u); return;
   }
   if (a === 'aval') { const ar = g.areas[+el.dataset.i]; if (!ar || ar.locked) return; ar.value = clampN((Number(ar.value) || 5) + (+el.dataset.d), 1, 10); save(); render(); return; }
   if (a === 'decide') {
@@ -253,11 +317,22 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('change', e => {
   const el = e.target; const d = el.dataset || {};
+  if (d.habt) { const hk = d.habt; const cur = habT(hk).slice(); const m = toMin(el.value); if (d.w === 's') cur[0] = m; else cur[1] = m === 0 ? 1440 : m; if (cur[1] - cur[0] >= 15) { state.habT = Object.assign({}, state.habT, { [hk]: cur }); save(); toast('時間を ' + fmtT(cur[0]) + '〜' + fmtT(cur[1] % 1440) + ' にしました'); } else { toast('終了は開始より15分以上あとにしてください'); } setTimeout(render, 0); return; }
+  if (d.std) {
+    const box = el.closest('.stdrow'); const v = parseFloat(box.querySelector('input').value); const u = box.querySelector('select').value;
+    if (v > 0) { state.stdMin = clampN(Math.round(v * (u === 'h' ? 60 : 1) / 15) * 15, 15, 720); state.stdUnit = u; save(); setTimeout(render, 0); toast('標準サイズを ' + fmtDur(stdMin()) + ' にしました'); } else setTimeout(render, 0);
+    return;
+  }
   if (d.yt != null) { const o = state.goals.year.items[+d.yt]; if (o) { o.tags = tagParse(el.value); delete o.tag; save(); } return; }
   if (d.yd != null) { const o = state.goals.year.items[+d.yd]; if (o) { o.d = String(el.value).slice(0, 300); save(); } return; }
   if (el.id === 'bkfile') { backupRead(el.files && el.files[0]); return; }
   if (d.chg === 'evmove') {
     const ev = state.events.find(x => x.id === d.id); if (!ev || ev.done) return;
+    if (d.k === 'end') {
+      let en = toMin(el.value); if (en === 0) en = 1440; const dur = en - ev.start;
+      if (!el.value || dur < 15) { toast('終了は、開始より15分以上あとにしてください'); render(); return; }
+      commit(resizeEvent(state, ev.id, dur / 120)); return;
+    }
     const date = d.k === 'date' ? el.value : ev.date; const start = d.k === 'time' ? toMin(el.value) : ev.start;
     if (!DATE_RE.test(date) || (d.k === 'time' && !el.value)) { render(); return; }
     ui.wk = sundayOf(date); commit(moveEvent(state, ev.id, date, start)); return;
@@ -376,12 +451,21 @@ function backupApply() {
   if (!state.habHide) state.habHide = []; if (!state.hab) state.hab = []; if (!state.habDist) state.habDist = {}; if (!state.qlib) state.qlib = {}; if (!state.shopHide) state.shopHide = []; if (!state.shopOrder) state.shopOrder = [];
   normGoals(state.goals.week); normGoals(state.goals.month);
   if (!state.lastBackup) state.lastBackup = keepStamp;
-  state = syncSP(state); applyTheme(); ui.wk = sundayOf(state.day); ui.calJump = true; ui.calPos = {}; ui.pop2 = null;
+  state = syncSP(state); applyTheme(); ui.wk = sundayOf(state.day); ui.calJump = true; ui.calPos = {}; ui.pop2 = null; if (state.rbPend) ui.rbf = { step: "intro" };
   save(); render(); toast('バックアップから戻しました');
 }
 
 /* ---- タグ入力(メモアプリのように、Enter・スペース・カンマで次々追加) ---- */
-function tagList(k) { return k === 'new' ? (ui.newYearTags = ui.newYearTags || []) : (state.goals.year.items[+k] ? (state.goals.year.items[+k].tags = state.goals.year.items[+k].tags || []) : null); }
+function tagList(k) {
+  k = String(k); if (k === 'new') return (ui.newYearTags = ui.newYearTags || []);
+  let o = null; const m = k.split(':');
+  if (m.length === 1) o = state.goals.year.items[+k];
+  else if (m[0] === 'a') o = (state.goals[m[1]] || { areas: [] }).areas[+m[2]];
+  else if (m[0] === 'o') o = (state.goals[m[1]] || { outcomes: [] }).outcomes[+m[2]];
+  else if (m[0] === 'e') o = state.events.find(x => x.id === m[1]);
+  else if (m[0] === 'h') { state.habTags = state.habTags || {}; return (state.habTags[m[1]] = state.habTags[m[1]] || []); }
+  if (!o) return null; if (!Array.isArray(o.tags)) o.tags = oTags(o).slice(); delete o.tag; return o.tags;
+}
 function tagCommit(inp) {
   const k = inp.dataset.tin; const list = tagList(k); if (!list) return;
   tagParse(inp.value).forEach(t => { if (list.indexOf(t) < 0 && list.length < 8) { list.push(t); inp.insertAdjacentHTML('beforebegin', tagChip(k, t)); } });

@@ -41,7 +41,9 @@
   }
   function dt(s) { return { dateTime: s, timeZone: TZ }; }
   function bodyOf(a) {
-    return { summary: a.summary, description: a.description, start: dt(a.startTime), end: dt(a.endTime), reminders: { useDefault: a.useDefaultReminders !== false } };
+    var b = { summary: a.summary, description: a.description, start: dt(a.startTime), end: dt(a.endTime), reminders: { useDefault: a.useDefaultReminders !== false } };
+    if (a.colorId) b.colorId = String(a.colorId);
+    return b;
   }
   function call(method, url, body, retried) {
     return getToken().then(function (tok) {
@@ -60,6 +62,10 @@
       if (tool === 'create_event') return call('POST', API, bodyOf(a)).then(function (j) { if (!j.id) throw { code: 'gapi', status: j.status }; return { payload: { id: j.id } }; });
       if (tool === 'update_event') return call('PATCH', API + '/' + encodeURIComponent(a.eventId), bodyOf(a)).then(function (j) { if (!j.id) throw { code: 'gapi', status: j.status }; return { payload: { id: j.id } }; });
       if (tool === 'delete_event') return call('DELETE', API + '/' + encodeURIComponent(a.eventId)).then(function (j) { if (j.status !== 204 && j.status !== 404 && j.status !== 410) throw { code: 'gapi', status: j.status }; return { payload: {} }; });
+      if (tool === 'list_events') {
+        var q = '?singleEvents=true&orderBy=startTime&maxResults=250&timeZone=' + encodeURIComponent(TZ) + '&timeMin=' + encodeURIComponent(a.startTime + '+09:00') + '&timeMax=' + encodeURIComponent(a.endTime + '+09:00');
+        return call('GET', API + q).then(function (j) { if (!j.items) throw { code: 'gapi', status: j.status }; return { payload: { events: j.items } }; });
+      }
       return Promise.reject({ code: 'gapi' });
     }
   };

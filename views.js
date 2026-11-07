@@ -88,7 +88,7 @@ function viewShop() {
     '<div class="goldbar"><span>所持ゴールド</span><b class="num">' + fmt(state.gold) + ' G</b>' + (state.pend.gold ? '<small>獲得予定 +' + fmt(state.pend.gold) + ' G(今日を終了で確定)</small>' : '<small>1G = 1円</small>') + '</div>' +
     (inv ? '<section class="sec"><h2 class="sh">所持している券<small>タップで使う</small></h2><div class="tkts">' + (owned || '<span class="note">持っている券はありません。</span>') + '</div></section>' +
       '<section class="sec"><h2 class="sh">購入・使用の履歴</h2>' + (hist || '<div class="note">まだ履歴はありません。</div>') + '</section>'
-      : '<section class="sec"><h2 class="sh">券買所<button class="btn sm shedit" data-action="shopedit" aria-pressed="' + edit + '">' + (edit ? '完了' : '✎ 編集') + '</button></h2>' + shop + add + '</section>') + '</div>';
+      : '<section class="sec"><h2 class="sh">転生</h2><div class="form">' + (state.rbPend ? '<div class="note">転生の準備ができています。スキルと特別券を選んで、次の周回へ進みます。</div><button class="btn primary block" data-action="rbstart">転生をはじめる</button>' : '<div class="note">転生は、6/30 と 12/31 の「今日を終了」のあとに行います。(いまは ' + state.cycle + '周目)</div>') + '</div></section>' + '<section class="sec"><h2 class="sh">券買所<button class="btn sm shedit" data-action="shopedit" aria-pressed="' + edit + '">' + (edit ? '完了' : '✎ 編集') + '</button></h2>' + shop + add + '</section>') + '</div>';
 }
 
 /* ---- スキル獲得 ---- */
@@ -178,7 +178,7 @@ function micField(btn) {
 
 /* ---- クエストボード: 成果目標・サブ・イベント・緊急は「内容と数」だけ ---- */
 const bdRows = rows => '<div class="bd">' + rows.map(r => '<div class="bdr"><span>' + esc(r[0]) + '</span><b class="num">' + r[1] + '</b></div>').join('') + '</div>';
-function subCount(q) { return q.unit === '回' ? q.cnt + ' / ' + q.target + '回' : q.target + q.unit + ' · ' + q.cnt + '回'; }
+function subCount(q) { if (isTU(q.unit)) return fmtAmt(q.amt) + ' / ' + q.target + q.unit; return q.unit === '回' ? q.cnt + ' / ' + q.target + '回' : q.target + q.unit + ' · ' + q.cnt + '回'; }
 function boardLists(date) {
   const subs = subFor(date); const urg = urgentInWeek(date); const ew = eventWeek(date);
   const sD = subs.reduce((a, q) => a + (q.unit === '回' ? Math.min(q.cnt, q.target) : q.cnt), 0), sT = subs.reduce((a, q) => a + (q.unit === '回' ? q.target : 0), 0);
@@ -199,7 +199,7 @@ function acceptLists(date) {
   return qdet('ao', '成果目標', os.filter(x => x.o.done).length + '/' + os.length + ' 達成', outH) +
     qdet('sub', 'サブクエスト', '今週 ' + subs.reduce((a, q) => a + q.cnt, 0) + '回 · 1回 +' + QV.sub.xp + 'Pt +' + QV.sub.g + 'G', subH) +
     qdet('ev', 'イベントクエスト', evD + '/' + ew.quests.length + ' · 全部で +' + QV.bonus + 'G', '<div class="evbanner tone-' + ew.theme.tone + '"><span class="mk" aria-hidden="true">' + ew.theme.mark + '</span><div><b>' + esc(ew.theme.name) + '</b><small>' + md2(ew.ws) + '〜' + md2(ew.we) + '</small></div><span class="num evc">' + evD + '/' + ew.quests.length + '</span></div><div class="qlist2" style="margin-top:8px">' + ew.quests.map(q => qItem(q, date)).join('') + '</div>') +
-    (urg.length ? qdet('ur', '緊急クエスト', '今日だけ ' + uD + '/' + urg.length + '　やらなくてOK・できたらすごい！', '<div class="qlist2">' + urg.map(q => qItem(q, date)).join('') + '</div>', 'urgent') : '');
+    (urg.length ? qdet('ur', '緊急クエスト', '今日だけ ' + uD + '/' + urg.length, '<div class="qlist2">' + urg.map(q => qItem(q, date)).join('') + '</div>', 'urgent') : '');
 }
 
 /* ---- レコード: 成果目標・サブ・イベント・緊急の達成度(押すと詳細) ---- */
@@ -226,4 +226,32 @@ function achSection() {
 function spConds() {
   return SP_RANKS.map((r, i) => ({ ok: (state.spRank || 0) > i, t: '総合ランク ' + r[1] + ' に到達(' + fmt(r[0]) + ' Pt)', v: '1SP' }))
     .concat(STATS.map(s => ({ ok: (state.spStats || []).indexOf(s.id) >= 0, t: s.name + '(' + s.id + ') が 2,400 Pt に到達 (' + fmt(state.pts[s.id]) + ' Pt)', v: '1SP' })));
+}
+
+/* ---- 転生(6/30・12/31の「今日を終了」のあと): 演出 → スキル → 特別券 → 演出 ---- */
+function rbPicker() {
+  const rb = ui.rb || (ui.rb = { n: {} }); const N = rbPicks(state); const tot = RB_TICKETS.reduce((a, t) => a + (rb.n[t[0]] || 0), 0);
+  return '<div class="note">この周回で獲得したSP <b class="num">' + cycSP(state) + '</b> → 選べる特別券 <b class="num">' + N + '枚</b>(はじめは1枚、SPが' + RB_STEP + 'ふえるごとに+1枚)。何周目でも同じです。</div>' +
+    RB_TICKETS.map(t => '<div class="item"><div class="ih"><b>' + t[1] + '</b><small>MP +100</small></div><div class="ib"><button class="btn sm" data-action="rbadj" data-id="' + t[0] + '" data-d="-1" aria-label="' + t[1] + 'をへらす"' + ((rb.n[t[0]] || 0) > 0 ? '' : ' disabled') + '>−</button><b class="num">' + (rb.n[t[0]] || 0) + '</b><button class="btn sm primary" data-action="rbadj" data-id="' + t[0] + '" data-d="1" aria-label="' + t[1] + 'をふやす"' + (tot < N ? '' : ' disabled') + '>＋</button></div></div>').join('') +
+    '<button class="btn primary block" data-action="rbgo"' + (tot >= 1 ? '' : ' disabled') + '>選んだ ' + tot + '枚 で転生する</button>';
+}
+const rbRings = () => '<div class="rbrings" aria-hidden="true"><i></i><i></i><i></i></div>';
+function rbHTML() {
+  const f = ui.rbf; if (!f) return '';
+  let body;
+  if (f.step === 'intro') {
+    const c = f.cele;
+    body = '<div class="rbst">' + rbRings() + '<div class="rbpet">' + petSVG(96, 'celepet') + '</div><h2>' + state.cycle + '周目の旅が終わります</h2><p>ここまでの歩みが、次の旅の力になります。</p>' +
+      (c ? '<div class="gainbox big">' + (STAT_IDS.filter(k => c.pts[k]).map(k => '<span style="color:' + lc(k) + '">' + k + ' +' + c.pts[k] + '</span>').join('　') || 'ステータス +0') + '<br><span style="color:var(--gold)">+' + fmt(c.gold) + ' G</span>' + (c.sp ? '　<b>SP +' + c.sp + '</b>' : '') + '</div>' : '') +
+      '<button class="btn primary block" data-action="rbstep" data-s="skill">スキルを選ぶ</button></div>';
+  } else if (f.step === 'skill') {
+    body = '<div class="rbst left"><h2>スキルを選ぶ</h2><div class="note">SPを使って、スキルを伸ばします。使わない分は、あとで選べます。</div>' + viewSkills() + '<button class="btn primary block" data-action="rbstep" data-s="ticket">つぎへ(特別券を選ぶ)</button></div>';
+  } else if (f.step === 'ticket') {
+    body = '<div class="rbst left"><h2>特別券を選ぶ</h2>' + rbPicker() + '</div>';
+  } else {
+    const got = f.got || [];
+    body = '<div class="rbst">' + rbRings() + '<div class="confetti rbconf" aria-hidden="true">' + Array.from({ length: 34 }, (_, i) => '<i style="--x:' + ((i * 29) % 100) + '%;--d:' + (i % 9) * 0.12 + 's;--c:' + lc(STAT_IDS[i % 5]) + '"></i>').join('') + '</div><div class="rbpet">' + petSVG(96, 'celepet') + '</div><h2>' + state.cycle + '周目へ転生しました！</h2>' +
+      (got.length ? '<div class="gainbox big">' + got.map(esc).join('<br>') + '</div>' : '') + '<button class="btn primary block" data-action="rbstep" data-s="end">新しい旅をはじめる</button></div>';
+  }
+  return '<div class="rbov" role="dialog" aria-modal="true">' + body + '</div>';
 }

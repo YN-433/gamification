@@ -42,16 +42,19 @@ function migrate45(s) {
   n.goals.year = { year: Number(n.day.slice(0, 4)), items: [] };
   return n;
 }
-// ステータスの入れ替え: 免疫(IMM)+体力(STR) → 健康(HLT)、新しく技術(TEC)。古い保存データ・バックアップを自動で変換する
+// ステータスの入れ替え: 免疫(IMM)+体力(STR) → 健康(VIT)、新しく技術(TEC)。古い保存データ・バックアップを自動で変換する
 function migrateStats(s) {
-  const fix = v => (v === 'IMM' || v === 'STR') ? 'HLT' : v;
+  const fix = v => (v === 'IMM' || v === 'STR' || v === 'HLT') ? 'VIT' : v;
   (function walk(o) {
     if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) { if (typeof o[i] === 'string') o[i] = fix(o[i]); else if (o[i] && typeof o[i] === 'object') walk(o[i]); } return; }
     if (!o || typeof o !== 'object') return;
-    if ('IMM' in o || 'STR' in o) { o.HLT = (Number(o.HLT) || 0) + (Number(o.IMM) || 0) + (Number(o.STR) || 0); delete o.IMM; delete o.STR; }
+    if ('IMM' in o || 'STR' in o || 'HLT' in o) { o.VIT = (Number(o.VIT) || 0) + (Number(o.IMM) || 0) + (Number(o.STR) || 0) + (Number(o.HLT) || 0); delete o.IMM; delete o.STR; delete o.HLT; }
     if ('CHA' in o && 'REG' in o && !('TEC' in o)) o.TEC = 0;
     Object.keys(o).forEach(k => { const v = o[k]; if (typeof v === 'string') o[k] = fix(v); else if (v && typeof v === 'object') walk(v); });
   })(s);
+  (s.events || []).forEach(e => { if (!Array.isArray(e.tags)) e.tags = e.tag ? tagParse(e.tag) : []; delete e.tag; });
+  ['week', 'month'].forEach(k => { const g = s.goals && s.goals[k]; if (!g) return; (g.areas || []).forEach(a => { if (!Array.isArray(a.tags)) a.tags = a.tag ? tagParse(a.tag) : []; delete a.tag; delete a.memo; }); (g.outcomes || []).forEach(o => { if (!Array.isArray(o.tags)) o.tags = []; }); });
+  if (!s.lib) s.lib = { a: {}, o: {}, h: {} }; if (!s.habTags) s.habTags = {};
   if (s.goals && s.goals.year && Array.isArray(s.goals.year.items)) s.goals.year.items.forEach(o => { if (!Array.isArray(o.tags)) o.tags = o.tag ? [o.tag] : []; delete o.tag; if (o.d == null) o.d = ''; });
   return s;
 }
@@ -70,7 +73,21 @@ function load() {
   } catch (e) {}
   return null;
 }
-function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+function save() { try { libSync(); localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+// 過去につくったクエスト・成果目標・習慣を覚えておく(あとから、もう一度足せる)
+function libSync() {
+  const L = state.lib = state.lib || {}; L.a = L.a || {}; L.o = L.o || {}; L.h = L.h || {};
+  ['week', 'month'].forEach(k => { const g = state.goals[k]; if (!g) return;
+    (g.areas || []).forEach(a => { const nm = String(a.name || '').trim(); if (!nm || a.ed || a.res || distSum(a.dist) !== DIST_TOTAL.a) return;
+      L.a[nm] = { name: nm, dist: clone(a.dist), want: a.want === 'm' ? 'm' : 'w', work: !!a.work, value: a.value || 5, tags: (a.tags || []).slice() }; });
+    (g.outcomes || []).forEach(o => { const t = String(o.t || '').trim(); if (!t || o.ed) return;
+      L.o[t] = { t: t, dist: clone(o.dist), n: o.n, u: o.u || '回', tags: (o.tags || []).slice() }; }); });
+  Object.keys(state.hist || {}).forEach(k => { const h = state.hist[k]; (h.areas || []).forEach(a => { if (a.name && !L.a[a.name]) L.a[a.name] = { name: a.name, dist: null, want: 'w', work: false, value: a.value || 5, tags: [] }; });
+    ((h.final && h.final.outcomes) || []).forEach(o => { if (o.t && !L.o[o.t]) L.o[o.t] = { t: o.t, dist: null, n: o.n || 1, u: o.u || '回', tags: [] }; }); });
+  Object.keys(state.qlib || {}).forEach(n => { if ((!L.a[n] || !L.a[n].dist) && distSum(state.qlib[n]) === DIST_TOTAL.a) L.a[n] = Object.assign(L.a[n] || {},  { name: n, dist: clone(state.qlib[n]), want: 'w', work: false, value: 5, tags: [] }); });
+  (state.hab || []).forEach(h => { const nm = String(h.name || '').trim(); if (!nm || (typeof ui !== 'undefined' && ui.edH === h.id) || distSum(h.dist) !== DIST_TOTAL.h) return;
+    const g = state.goals.week; L.h[nm] = { name: nm, dist: clone(h.dist), u: (g.hunits && g.hunits[h.id]) || '回', tags: ((state.habTags || {})[h.id] || []).slice() }; });
+}
 function setPath(obj, path, val) { const k = path.split('.'); let o = obj; for (let i = 0; i < k.length - 1; i++) o = o[k[i]]; o[k[k.length - 1]] = val; }
 
 let state = rollover(load() || seedState(iso(new Date())), iso(new Date()));
@@ -94,7 +111,7 @@ applyTheme();
 ['journal', 'closed', 'inv'].forEach(k => { if (!state[k]) state[k] = {}; });
 if (!state.pend) state.pend = { pts: {}, gold: 0 };
 if (!state.goals.year || state.goals.year.year !== Number(state.day.slice(0, 4))) state.goals.year = { year: Number(state.day.slice(0, 4)), items: (state.goals.year && state.goals.year.year === Number(state.day.slice(0, 4))) ? state.goals.year.items : [] };
-normGoals(state.goals.week); normGoals(state.goals.month);
+normGoals(state.goals.week); normGoals(state.goals.month); migrateStats(state);
 if (!state.habHide) state.habHide = []; if (!state.hab) state.hab = []; if (!state.habDist) state.habDist = {}; if (!state.qlib) state.qlib = {}; if (!state.shopHide) state.shopHide = []; if (!state.shopOrder) state.shopOrder = [];
 ['week', 'month'].forEach(k => state.goals[k].areas.forEach(a => { if (a.name && !a.ed && distSum(a.dist) > 0 && !state.qlib[a.name]) state.qlib[a.name] = clone(a.dist); }));
 if (state.wkStart == null) {
@@ -103,12 +120,13 @@ if (state.wkStart == null) {
   const ws0 = sundayOf(state.day); state.goals.week.start = ws0; state.goals.week.end = addDays(ws0, 6);
 } else WKS = state.wkStart;
 state = syncSP(state);
+(function () { try { libSync(); } catch (e) {} })();
 const ui = {
   tab: 'home', sub: null, qv: 'board', wk: sundayOf(iso(new Date())), menu: false, resetArm: false,
   pop2: null, petMsg: '', petJump: 0, wedit: false, gc: null, sh: 'shop', addItem: false,
   ni: { name: '', cat: '', g: 500, mp: 20, stat: 'INT', pt: 0 }, ge: { o: false, h: false }, wcv: 'week', qopen: { sub: true, ur: true, ev: true, ao: true, over: true }, qo: {}, edH: null, delMode: false, trayAdd: false, zoom: 1, calPos: {}, calJump: false, cv: 'week', mon: iso(new Date()).slice(0, 7), draft: {}, talk: '', talkOpen: false, rec: false, jbusy: false, jerr: '',
   gk: 'week', voice: '', patch: null, questions: null, busy: '', err: '', sample: null, ctl: null, pdf: null,
-  h: { energy: 78, steps: 6800, sleep: 7.2 }, newYear: '', newYearTag: '', newYearD: '', newYearTags: [], yTags: [], yfo: false, yo: {}, rdo: {}
+  h: { energy: 78, steps: 6800, sleep: 7.2 }, newYear: '', newYearTag: '', newYearD: '', newYearTags: [], zrh: 30, libTag: [], yTags: [], yfo: false, yo: {}, rdo: {}
 };
 let toastTimer = null;
 function toast(msg) {

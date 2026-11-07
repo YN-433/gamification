@@ -50,16 +50,18 @@ function evalHTML(gk, g, label) {
 
 /* ---- 共通パーツ ---- */
 const MIC_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0013 0M12 18v3"/></svg>';
-const micBtn = () => '<button type="button" class="micb" data-action="micf" aria-label="話して入力">' + MIC_SVG + '</button>';
+const micBtnReal = () => '<button type="button" class="micb" data-action="micf" aria-label="話して入力">' + MIC_SVG + '</button>';
+const micBtn = () => ''; // マイクは、省察とレコード以外では出さない
+const libPlus = (t, label) => '<button class="ibtn sm" data-action="pop" data-k="lib" data-t="' + t + '" aria-label="' + label + '">' + PLUS_SVG + '</button>';
 const GRIP_SVG = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
 const INFO = {
-  stats: ['5つのステータス', '魅力(CHA)：外見や見た目を磨く行動。筋トレで体を作る、メイク、美容、身だしなみ、人づきあいなど。\n健康(HLT)：からだと健康に関わる行動。運動やスポーツ(サッカーなど)、食事、睡眠、休養など。\n規律(REG)：片づけ・習慣・仕事や家事の継続など、決めたことを守る行動。\n知性(INT)：頭を使う行動。学習・読書・企画のほか、サッカーの戦術理解(サッカーIQ)のような「分かる力」も。\n技術(TEC)：できることが増える行動。サッカーのプレー、楽器、制作、プログラミングなど、技能の上達。\n\n1つの予定を、いくつかに分けて入れられます。たとえばサッカーに行ったら、健康+技術+知性、のように。どれに入るかは、クエスト・成果目標・習慣を作るときの「ステータスの配分」で決まります。1BOX(2時間)こなすと、その配分でPtが入ります(★で×0.8〜2.0)。成果目標は達成したとき、習慣はこなしたときに入ります。確定は「今日を終了」で行われます。'],
+  stats: ['5つのステータス', '魅力(CHA)：外見や見た目を磨く行動。筋トレで体を作る、メイク、美容、身だしなみ、人づきあいなど。\n活力(VIT)：からだと健康に関わる行動。運動やスポーツ(サッカーなど)、食事、睡眠、休養など。\n規律(REG)：片づけ・習慣・仕事や家事の継続など、決めたことを守る行動。\n知性(INT)：頭を使う行動。学習・読書・企画のほか、サッカーの戦術理解(サッカーIQ)のような「分かる力」も。\n技術(TEC)：できることが増える行動。サッカーのプレー、楽器、制作、プログラミングなど、技能の上達。\n\n1つの予定を、いくつかに分けて入れられます。たとえばサッカーに行ったら、健康+技術+知性、のように。どれに入るかは、クエスト・成果目標・習慣を作るときの「ステータスの配分」で決まります。1BOX(2時間)こなすと、その配分でPtが入ります(★で×0.8〜2.0)。成果目標は達成したとき、習慣はこなしたときに入ります。確定は「今日を終了」で行われます。'],
   backup: ['データのバックアップ', '「ファイルに保存」で、いまの記録を1つのファイル(.json)にして、端末に保存します。「ファイルから読み込む」で、そのファイルから記録を戻せます(いまの記録は置き換わります)。\n\n機種変更・ブラウザのデータ削除・アプリの入れ直しの前に、保存しておくと安心です。ファイルにはあなたの記録がそのまま入っているので、人に渡さないでください。'],
   hskill: ['スキル', 'SPは、ランクが上がったり、ステータスが一定のPtに達したりすると増えます。右上の＋から、スキルにSPを割り振ります。Lv.6以上は金スキルになります。スキルをタップすると、効果が見られます。'],
   htkt: ['チケット', 'ショップで買ったご褒美の券が、ここに入ります。券をタップして使う枚数を決めると、使えます。実物を買って、ご褒美を受け取ったときに使ってください。券によって、MPが回復したり、ステータスが付いたりします。'],
-  evmemo: ['メモ', 'このクエストの予定に、メモを残せます。「Googleカレンダーに反映」を押すと、Googleカレンダーの予定の「説明」に入ります(すでに反映した予定は、もう一度押すと説明が更新されます)。'],
-  cal: ['カレンダーの使い方', '左右で時間、上下で週を動かします。予定を長押ししてドラッグすると動かせます。タップすると、報告・★評価・削除ができます。月表示では、日付を押すとその週の時間表示に移り、クエストを日付に落とすと空いている時間に入ります。'],
-  tray: ['クエストを置く', 'クエストを長押ししてカレンダーにドラッグします(1回で1BOX)。置いた数が、各クエストの予定BOXに自動で入ります。メインクエストで時間の変更・報告・評価ができます。'],
+  evmemo: ['メモ', 'このクエストの予定に、メモを残せます。「反映」を押すと、Googleカレンダーの予定の「説明」に入ります(すでに反映した予定は、もう一度押すと説明が更新されます)。'],
+  cal: ['カレンダーの使い方', '左右で時間、上下で週を動かします。2本指を横に開くと時間が細かくなります(＋−でも変えられます)。「Googleカレンダー」の「読込」で予定をここに取り込み、「反映」でここの予定をGoogleカレンダーに送ります。予定を長押ししてドラッグすると動かせます。タップすると、報告・★評価・削除ができます。月表示では、日付を押すとその週の時間表示に移り、クエストを日付に落とすと空いている時間に入ります。'],
+  tray: ['クエストを置く', 'クエストを長押ししてカレンダーにドラッグします(1回で、設定の「クエストの標準サイズ」の長さ。基本は2時間=1BOX)。置いた数が、各クエストの予定BOXに自動で入ります。置いたあとは、タップして開始・終了を入れると、1時間などにも変えられます。'],
   qlist: ['クエストの並べ替え・削除', '上から優先順です(1,2,3…。常駐クエストは「-」)。見出しを長押しして並べ替え、ゴミ箱へドラッグで消せます。ゴミ箱を押すと×が出ます。'],
   numunit: ['数値と単位', '回・日・個・つ・人・分などの単位を選んで、目標の数値を入れられます。右上の✎を押すと、並べ替えと削除ができます。'],
   decide: ['「決定」について', '決定すると、クエストと成果目標の名前・配分は変えられなくなります。あとから足すことはできます。直したいときは「決定を解除して直す」を押します。'],
@@ -109,6 +111,7 @@ function qCard(k, g, a, i) {
   let body;
   if (a.ed && !lk) {
     body = '<div class="ahead mfield"><input class="in" type="text" aria-label="クエスト名" placeholder="クエスト名(例：副業)" value="' + esc(a.name) + '" data-f="areas.' + i + '.name">' + micBtn() + '</div>' +
+      '<div class="field"><span class="lbl">タグ</span>' + tagIn('a:' + k + ':' + i, oTags(a), 'タグを入力して Enter') + '</div>' +
       '<div class="av"><span class="lbl">価値観<small> 自分の価値観をどれだけ満たすか 1〜10</small></span><div class="alc big"><button data-action="aval" data-i="' + i + '" data-d="-1" aria-label="価値観を下げる">−</button><b class="num">' + a.value + '</b><button data-action="aval" data-i="' + i + '" data-d="1" aria-label="価値観を上げる">＋</button></div></div>' +
       '<div class="wwsel"><div class="seg" role="group" aria-label="want・must"><button data-action="aww" data-i="' + i + '" data-k="want" data-v="w" aria-pressed="' + (a.want !== 'm') + '">want</button><button data-action="aww" data-i="' + i + '" data-k="want" data-v="m" aria-pressed="' + (a.want === 'm') + '">must</button></div>' +
         '<div class="seg" role="group" aria-label="working・private"><button data-action="aww" data-i="' + i + '" data-k="work" data-v="1" aria-pressed="' + !!a.work + '">working</button><button data-action="aww" data-i="' + i + '" data-k="work" data-v="0" aria-pressed="' + !a.work + '">private</button></div>' +
@@ -119,8 +122,7 @@ function qCard(k, g, a, i) {
   } else {
     body = '<div class="qrd"><div class="qrr"><span class="lbl">価値観</span><b class="num">' + a.value + '</b><span class="lbl">予定BOX</span><b class="num">' + bx + '</b><small>(' + bx * 2 + '時間・カレンダーに置いた数)</small></div>' +
       '<div class="qrr"><span class="lbl">配分</span><span class="dcs">' + distChips(a.dist) + '</span></div></div>' +
-      '<div class="dates"><label class="field"><span class="lbl">タグ</span><span class="mfield"><input class="in" type="text" value="' + esc(a.tag || '') + '" data-f="areas.' + i + '.tag" placeholder="例：転職">' + micBtn() + '</span></label>' +
-      '<label class="field"><span class="lbl">内容の詳細</span><span class="mfield"><input class="in" type="text" value="' + esc(a.memo || '') + '" data-f="areas.' + i + '.memo" placeholder="メモ">' + micBtn() + '</span></label></div>' +
+      (oTags(a).length ? '<div class="ytgs">' + oTags(a).map(t => '<span class="ytg">#' + esc(t) + '</span>').join('') + '</div>' : '') +
       (lk ? '<div class="note">🔒 決定済み(「決定を解除して直す」で変えられます)</div>' : '<div class="btnrow"><button class="btn sm" data-action="aedit" data-i="' + i + '">編集</button></div>') + (a.res ? '<div class="note">常駐クエストです。毎週(月・年は時期になると)自動で入り、消せません。</div>' : '');
   }
   return '<details class="qa' + (lk ? ' locked' : '') + '" data-qa="' + a.id + '" data-qi="' + i + '" style="--fc:' + wwOf(a)[1] + ';--gr:' + gradOf(a.dist) + '"' + (open ? ' open' : '') + '>' + head + '<div class="qbody">' + body + '</div></details>';
@@ -129,11 +131,11 @@ function qCard(k, g, a, i) {
 function outRow(g, o, i) {
   const lk = o.locked; const ok = String(o.t || '').trim() && distSum(o.dist) === DIST_TOTAL.o;
   if (o.ed && !lk) return '<div class="oed" data-oi="' + i + '"><div class="ahead mfield"><input class="in" type="text" aria-label="成果目標" placeholder="成果目標(例：不動産を見に行く)" value="' + esc(o.t) + '" data-f="outcomes.' + i + '.t">' + micBtn() + '</div>' +
-    distEditor('o', i, o.dist, DIST_TOTAL.o) + '<div class="note">達成したとき、この配分のptが1回だけ入ります。</div>' +
+    '<div class="field"><span class="lbl">タグ</span>' + tagIn('o:' + ui.gk + ':' + i, oTags(o), 'タグを入力して Enter') + '</div>' + distEditor('o', i, o.dist, DIST_TOTAL.o) + '<div class="note">達成したとき、この配分のptが1回だけ入ります。</div>' +
     '<div class="btnrow"><button class="btn primary sm" data-action="ook" data-i="' + i + '"' + (ok ? '' : ' disabled') + '>決定</button><button class="btn sm" data-action="delout" data-i="' + i + '">やめる</button></div></div>';
   const ge = ui.ge && ui.ge.o;
   return '<div class="ocrow ow' + (ge ? ' ge' : '') + '" data-oi="' + i + '">' + (ge ? '<span class="grip" data-drag="oord" data-i="' + i + '" role="button" aria-label="長押しして並べ替え">' + GRIP_SVG + '</span>' : '') +
-    '<div class="ot2"><span class="ot">' + esc(o.t) + '</span><span class="dcs">' + distChips(o.dist) + '</span></div>' +
+    '<div class="ot2"><span class="ot">' + esc(o.t) + '</span><span class="dcs">' + distChips(o.dist) + '</span>' + (oTags(o).length ? '<span class="ytgs">' + oTags(o).map(t => '<span class="ytg">#' + esc(t) + '</span>').join('') + '</span>' : '') + '</div>' +
     '<span class="hc"><input class="in" type="number" inputmode="decimal" min="0" aria-label="' + esc(o.t) + 'の数値" value="' + (Number(o.n) || 0) + '" data-f="outcomes.' + i + '.n" data-t="n"><select class="in" aria-label="単位" data-ou="' + i + '">' + HAB_UNITS.map(u => '<option' + (u === (o.u || '回') ? ' selected' : '') + '>' + u + '</option>').join('') + '</select></span>' +
     '<span class="oact">' + (lk ? '<span aria-label="決定済み">🔒</span>' : '<button class="lnk" data-action="oedit" data-i="' + i + '">編集</button>') + (ge ? '<button class="xbtn" data-action="delout" data-i="' + i + '" aria-label="この成果目標を消す">×</button>' : '') + '</span></div>';
 }
@@ -146,12 +148,12 @@ function habSection(g, wk) {
       '<select class="in" aria-label="単位" data-hu="' + id + '">' + HAB_UNITS.map(u => '<option' + (u === un ? ' selected' : '') + '>' + u + '</option>').join('') + '</select></span>' +
       '<span class="oact">' + (ed ? '' : '<button class="lnk" data-action="hedit" data-id="' + id + '">編集</button>') + (ui.ge && ui.ge.h ? '<button class="xbtn" data-action="hdel" data-id="' + id + '" aria-label="この習慣を消す">×</button>' : '') + '</span></div>' +
       (ed ? '<div class="oed">' + (custom ? '<div class="ahead mfield"><input class="in" type="text" aria-label="習慣の名前" placeholder="習慣の名前(例：日記)" value="' + esc(h[1]) + '" data-hn="' + id + '">' + micBtn() + '</div>' : '') +
-        distEditor('h', id, d, DIST_TOTAL.h) + '<div class="note">1回達成するたびに、この配分で' + DIST_TOTAL.h + 'ptが入ります。</div><div class="btnrow"><button class="btn primary sm" data-action="hok" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>決定</button></div></div>'
-        : '<div class="dcs">' + distChips(d) + '</div>') + '</div>';
+        '<div class="field"><span class="lbl">タグ</span>' + tagIn('h:' + id, (state.habTags || {})[id] || [], 'タグを入力して Enter') + '</div>' + distEditor('h', id, d, DIST_TOTAL.h) + '<div class="note">1回達成するたびに、この配分で' + DIST_TOTAL.h + 'ptが入ります。</div><div class="btnrow"><button class="btn primary sm" data-action="hok" data-id="' + id + '"' + (ok ? '' : ' disabled') + '>決定</button></div></div>'
+        : '<div class="dcs">' + distChips(d) + (((state.habTags || {})[id] || []).length ? ((state.habTags || {})[id] || []).map(t => '<span class="ytg">#' + esc(t) + '</span>').join('') : '') + '</div>') + '</div>';
   }).join('');
   const hid = HAB.filter(h => (state.habHide || []).indexOf(h[0]) >= 0).map(h => '<button class="tg" data-action="hrestore" data-id="' + h[0] + '">＋ ' + h[1] + '</button>').join('');
-  return '<div class="field"><span class="lbl lbe">サブクエスト(習慣目標)' + infoBtn('numunit') + editBtn('h') + '</span>' + rows +
-    '<div class="btnrow"><button class="btn sm" data-action="hadd">＋ 習慣を追加</button></div>' + (hid ? '<div class="tagrow"><small>消した習慣を戻す:</small>' + hid + '</div>' : '') + '</div>';
+  return '<div class="field"><span class="lbl lbe">サブクエスト(習慣目標)' + infoBtn('numunit') + '<span class="lbr">' + editBtn('h') + libPlus('h', 'サブクエストを追加') + '</span></span>' + rows +
+    '' + (hid ? '<div class="tagrow"><small>消した習慣を戻す:</small>' + hid + '</div>' : '') + '</div>';
 }
 function viewGoals() {
   if (ui.gk === 'year') return viewYear();
@@ -167,12 +169,12 @@ function viewGoals() {
   const nLock = g.areas.filter(a => a.locked).length + g.outcomes.filter(o => o.locked).length;
   return '<div class="stack">' +
     goalSeg() + goalSeg2() + '' +
-    '<section class="sec"><h2 class="sh">' + lab + 'の目標<span class="hbtns"><button class="ibtn" data-action="pop" data-k="howto" aria-label="' + lab + 'の目標の作り方">' + INFO_SVG + '</button><button class="ibtn" data-action="addarea" aria-label="クエストを追加">' + PLUS_SVG + '</button><button class="ibtn' + (ui.delMode ? ' on' : '') + '" data-trash="1" data-action="deltoggle" aria-pressed="' + ui.delMode + '" aria-label="ゴミ箱(クエストをここにドラッグして消す)">' + TRASH_SVG + '</button></span></h2><div class="form">' +
+    '<section class="sec"><h2 class="sh">' + lab + 'の目標<span class="hbtns"><button class="ibtn" data-action="pop" data-k="howto" aria-label="' + lab + 'の目標の作り方">' + INFO_SVG + '</button></span></h2><div class="form">' +
       '<div class="dates"><label class="field"><span class="lbl">はじまり</span><input class="in" type="date" value="' + g.start + '" data-f="start"></label><label class="field"><span class="lbl">おわり</span><input class="in" type="date" value="' + g.end + '" data-f="end"></label></div>' +
-      '<div class="field"><span class="lbl lbe">クエスト' + infoBtn('qlist') + '</span><div class="qalist" data-qlist="' + k + '">' + (cards || '<div class="note">まだクエストがありません。右上の＋で作ります。</div>') + '</div></div>' +
+      '<div class="field"><span class="lbl lbe">クエスト' + infoBtn('qlist') + '<span class="lbr"><button class="ibtn sm' + (ui.delMode ? ' on' : '') + '" data-trash="1" data-action="deltoggle" aria-pressed="' + ui.delMode + '" aria-label="ゴミ箱(クエストをここにドラッグして消す)">' + TRASH_SVG + '</button>' + libPlus('a', 'クエストを追加') + '</span></span><div class="qalist" data-qlist="' + k + '">' + (cards || '<div class="note">まだクエストがありません。クエストの右上の＋で作ります。</div>') + '</div></div>' +
       '<div class="totalbox"><span><b>計 <span class="v" id="totalBox">' + total + '</span> BOX</b></span><span class="note" id="perDayNote">1日 <input class="in" style="width:64px;min-height:36px;text-align:center;display:inline-block" type="number" inputmode="numeric" min="1" max="12" aria-label="1日のBOXの目安" value="' + g.perDay + '" data-f="perDay" data-t="n"> BOX程度 (1BOX = 2時間)</span></div>' +
       strip +
-      '<div class="field"><span class="lbl lbe">成果目標' + infoBtn('numunit') + editBtn('o') + '</span>' + outs + '<button class="btn sm" data-action="addout" style="justify-self:start">＋ 成果目標を足す</button></div>' +
+      '<div class="field"><span class="lbl lbe">成果目標' + infoBtn('numunit') + '<span class="lbr">' + editBtn('o') + libPlus('o', '成果目標を追加') + '</span></span>' + outs + '</div>' +
       habSection(g, wk) +
       '<div class="field"><button class="btn primary block" data-action="decide"' + (nUnl ? '' : ' disabled') + '>' + (nUnl ? lab + 'の目標を決定する(未決定 ' + nUnl + '件)' : '決定済み') + '</button>' +
         '<div class="note">' + infoBtn('decide') + '</div>' +
@@ -185,8 +187,6 @@ function viewGoals() {
 const goalSeg2 = () => '<div class="seg seg2" role="group" aria-label="目標と省察">' + [['goal', '目標'], ['refl', '省察']].map(x => '<button data-action="gv" data-v="' + x[0] + '" aria-pressed="' + ((ui.gv || 'goal') === x[0]) + '">' + x[1] + '</button>').join('') + '</div>';
 const goalSeg = () => '<div class="seg" role="group" aria-label="期間">' + [['week', '今週'], ['month', '今月'], ['year', '今年']].map(x => '<button data-action="gk" data-v="' + x[0] + '" aria-pressed="' + (ui.gk === x[0]) + '">' + x[1] + '</button>').join('') + '</div>';
 // 今年の目標のタグ(複数)・説明
-const tagParse = s => { const r = []; String(s || '').split(/[,、，\s]+/).forEach(t => { t = t.replace(/^#/, '').trim().slice(0, 12); if (t && r.indexOf(t) < 0) r.push(t); }); return r.slice(0, 8); };
-const oTags = o => Array.isArray(o.tags) ? o.tags : (o.tag ? [o.tag] : []);
 const yTags = () => { const s = []; state.goals.year.items.forEach(o => oTags(o).forEach(t => { if (s.indexOf(t) < 0) s.push(t); })); return s; };
 const tagChip = (k, t) => '<span class="tgx">#' + esc(t) + '<button type="button" data-action="tagrm" data-k="' + esc(k) + '" data-t="' + esc(t) + '" aria-label="タグ ' + esc(t) + ' を外す">×</button></span>';
 const tagIn = (k, tags, ph) => '<div class="tagin" data-tk="' + esc(k) + '">' + tags.map(t => tagChip(k, t)).join('') + '<input class="tgi" type="text" list="ytaglist" enterkeyhint="done" data-tin="' + esc(k) + '" maxlength="12" placeholder="' + (tags.length ? '' : ph) + '" aria-label="タグを入力(Enterで確定)"></div>';
@@ -272,4 +272,53 @@ function viewQList() {
   return '<div class="stack"><div><button class="btn sm" data-action="tab" data-tab="home">← ホームへ</button></div>' +
     '<section class="sec"><h2 class="sh lbe">クエスト一覧<small>これまでに作ったクエスト · ' + list.length + '件</small>' + infoBtn('qhist') + '</h2>' +
       (rows || '<div class="note">まだクエストがありません。ゴールの「今週の目標」で作ると、ここに残ります。</div>') + '</section></div>';
+}
+
+/* ---- 過去につくったクエスト・成果目標・サブクエストを、見て・足す ---- */
+const LIBT = { a: 'クエスト', o: '成果目標', h: 'サブクエスト' };
+const libName = (t, it) => t === 'o' ? it.t : it.name;
+function libItems(t) {
+  const L = (state.lib || {})[t] || {}; const g = state.goals[ui.gk];
+  const have = t === 'a' ? g.areas.map(a => a.name) : t === 'o' ? g.outcomes.map(o => o.t) : habList().map(h => h[1]);
+  const items = Object.keys(L).filter(k => have.indexOf(k) < 0).map(k => Object.assign({ key: k }, L[k]));
+  if (t === 'h') (state.habHide || []).forEach(id => { const h = HAB.find(x => x[0] === id); if (h) items.push({ key: 'builtin:' + id, name: h[1], dist: habDist(id), u: '回', tags: (state.habTags || {})[id] || [] }); });
+  return items;
+}
+function libPopHTML(p) {
+  const t = p.t; const items = libItems(t); const f = p.f || [];
+  const tags = []; items.forEach(it => oTags(it).forEach(x => { if (tags.indexOf(x) < 0) tags.push(x); }));
+  const shown = items.filter(it => !f.length || f.some(x => x === '__none' ? !oTags(it).length : oTags(it).indexOf(x) >= 0));
+  const chip = (v, lab) => '<button class="tgc' + (v === '' ? (f.length ? '' : ' on') : (f.indexOf(v) >= 0 ? ' on' : '')) + '" data-action="libtag" data-v="' + esc(v) + '">' + lab + '</button>';
+  const one = it => '<button class="libit" data-action="libadd" data-t="' + t + '" data-key="' + esc(it.key) + '"><span class="libn">' + esc(libName(t, it)) + '</span><span class="dcs">' +
+    (t === 'a' ? '<span class="dch ww" style="--c:' + (WW[(it.want === 'm' ? 'm' : 'w') + (it.work ? 1 : 0)])[1] + '">' + (WW[(it.want === 'm' ? 'm' : 'w') + (it.work ? 1 : 0)])[0] + '</span>' : '') +
+    (t === 'o' ? '<span class="dch">' + (Number(it.n) || 1) + (it.u || '回') + '</span>' : '') + (t === 'h' ? '<span class="dch">' + esc(it.u || '回') + '</span>' : '') +
+    (it.dist ? distChips(it.dist) : '<span class="dch none">配分は追加後に決めます</span>') + oTags(it).map(x => '<span class="ytg">#' + esc(x) + '</span>').join('') + '</span></button>';
+  return '<h3>' + LIBT[t] + 'を追加</h3><button class="btn primary block" data-action="libnew" data-t="' + t + '">＋ 新しく作る</button>' +
+    '<div class="note" style="margin-top:6px"><b>これまでに作った' + LIBT[t] + '</b>(' + (ui.gk === 'month' ? '今月' : '今週') + 'の目標に足します)</div>' +
+    (tags.length ? '<div class="tgp">' + chip('', 'すべて') + tags.map(x => chip(x, '#' + esc(x))).join('') + (items.some(it => !oTags(it).length) ? chip('__none', 'タグなし') : '') + '</div>' : '') +
+    '<div class="liblist">' + (shown.length ? shown.map(one).join('') : '<div class="note">' + (items.length ? 'このタグのものはありません。' : 'まだ足せるものがありません。作って決定すると、ここに残ります。') + '</div>') + '</div>' +
+    '<button class="btn block" data-action="popclose">とじる</button>';
+}
+function libNew(t) {
+  const g = state.goals[ui.gk]; ui.pop2 = null;
+  if (t === 'a') { const ar = mkArea('', 5, {}); ar.ed = true; g.areas.push(ar); ui.qo[ar.id] = true; }
+  else if (t === 'o') g.outcomes.push({ id: 'o' + newId(), t: '', done: false, locked: false, dist: emptyDist(), ed: true, tags: [] });
+  else { const id = 'h' + newId(); state.hab = state.hab || []; state.hab.push({ id: id, name: '', dist: emptyDist() }); g.habits[id] = 1; ui.edH = id; }
+  save(); render();
+}
+function libAdd(t, key) {
+  const g = state.goals[ui.gk]; const L = (state.lib || {})[t] || {}; const it = L[key]; ui.pop2 = null;
+  if (t === 'a' && it) {
+    if (g.areas.some(a => a.name === key)) return;
+    const ok = it.dist && distSum(it.dist) === DIST_TOTAL.a; const ar = mkArea(key, it.value || 5, ok ? clone(it.dist) : {}, { want: it.want, work: it.work }); ar.tags = (it.tags || []).slice();
+    if (!ok) { ar.ed = true; ui.qo[ar.id] = true; } g.areas.push(ar); toast('「' + key + '」を足しました' + (ok ? '' : '(配分を決めてください)'));
+  } else if (t === 'o' && it) {
+    if (g.outcomes.some(o => o.t === key)) return;
+    const ok = it.dist && distSum(it.dist) === DIST_TOTAL.o;
+    g.outcomes.push({ id: 'o' + newId(), t: key, done: false, locked: false, dist: ok ? clone(it.dist) : emptyDist(), ed: !ok, n: it.n || 1, u: it.u || '回', v: 0, tags: (it.tags || []).slice() }); toast('成果目標を足しました' + (ok ? '' : '(配分を決めてください)'));
+  } else if (t === 'h') {
+    if (String(key).indexOf('builtin:') === 0) { const id = key.slice(8); state.habHide = (state.habHide || []).filter(x => x !== id); if (!g.habits[id]) g.habits[id] = 1; toast('サブクエストを足しました'); }
+    else if (it) { const id = 'h' + newId(); state.hab = state.hab || []; state.hab.push({ id: id, name: key, dist: clone(it.dist) }); g.habits[id] = 1; g.hunits = g.hunits || {}; g.hunits[id] = it.u || '回'; state.habTags = state.habTags || {}; state.habTags[id] = (it.tags || []).slice(); toast('サブクエストを足しました'); }
+  }
+  save(); render();
 }
